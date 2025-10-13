@@ -1,1 +1,6 @@
+/data/
+*.log
+*.out
+*.cover
 smtpserver
+smtpserver.exe

@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const heloName = "smtpserver.local"
+
 // Deliver attempts SMTP delivery to a given host with raw message data.
 func Deliver(host string, from string, to string, data []byte) error {
 	addr := net.JoinHostPort(host, "25")
@@ -18,25 +20,30 @@ func Deliver(host string, from string, to string, data []byte) error {
 	}
 	defer conn.Close()
 
+	if err := conn.SetDeadline(time.Now().Add(2 * time.Minute)); err != nil {
+		return fmt.Errorf("set deadline: %w", err)
+	}
+
 	client, err := smtp.NewClient(conn, host)
 	if err != nil {
 		return fmt.Errorf("new client: %w", err)
 	}
 	defer client.Close()
 
-	if err := client.Hello("localhost"); err != nil {
+	if err := client.Hello(heloName); err != nil {
 		return fmt.Errorf("helo: %w", err)
 	}
 
 	if ok, _ := client.Extension("STARTTLS"); ok {
 		tlsConf := &tls.Config{
-			ServerName: host,
-			MinVersion: tls.VersionTLS12,
+			ServerName:               host,
+			MinVersion:               tls.VersionTLS12,
+			PreferServerCipherSuites: true,
 		}
 		if err := client.StartTLS(tlsConf); err != nil {
 			return fmt.Errorf("starttls: %w", err)
 		}
-		if err := client.Hello("localhost"); err != nil {
+		if err := client.Hello(heloName); err != nil {
 			return fmt.Errorf("post-starttls helo: %w", err)
 		}
 	}

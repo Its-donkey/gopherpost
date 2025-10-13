@@ -10,6 +10,8 @@ This standalone SMTP server is implemented entirely with the Go standard library
 - Connection deadline enforcement to mitigate idle clients.
 - Automatic message persistence with recipient hashing to protect sensitive metadata.
 - Outbound delivery with MX lookup, opportunistic STARTTLS, and jittered retry queue.
+- Server-side message size limit (10 MiB) to guard against resource exhaustion.
+- Built-in instrumentation exposed via `/metrics` (expvar format).
 
 ## Usage
 
@@ -21,13 +23,17 @@ go build
 go run ./...
 ```
 
-### Command-line Flags
+### Configuration
 
-This server is configured through environment variables:
+This server is configured entirely through environment variables:
 
 - `SMTP_PORT` – TCP address to bind to (default `2525`).
+- `SMTP_HEALTH_ADDR` – Listen address for the health server (default `:8080`).
+- `SMTP_BANNER` – Custom greeting banner returned in the `220` response (default `smtpserver ready`).
 - `SMTP_DEBUG` – Set to `1` to enable verbose audit logging.
 - `SMTP_TLS_CERT` / `SMTP_TLS_KEY` – Enable TLS when both are provided.
+
+**Security note:** the server does not implement authentication and is intended for controlled environments (local testing, integration pipelines). Restrict network access, run as a non-root service account, and avoid exposing it to the public internet.
 
 ## Retrieving Stored Messages
 
@@ -88,6 +94,8 @@ sudo systemctl start smtpserver
 
 ## TLS Support
 Set `SMTP_TLS_CERT` and `SMTP_TLS_KEY` to enable STARTTLS. Certificates are served with a minimum TLS version of 1.2.
+The outbound client upgrades to TLS when the remote server advertises the capability, but it never accepts invalid certificates.
 
-## Health Checks
-An HTTP endpoint is available at `:8080/healthz` for readiness/liveness probes.
+## Health Checks & Metrics
+An HTTP endpoint is available at `:8080/healthz` (override via `SMTP_HEALTH_ADDR`) for readiness/liveness probes.
+Structured metrics are exported at `/metrics` in expvar JSON format.
