@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+var deliverFunc = Deliver
+
 // DeliverMessage resolves the domain and attempts SMTP delivery to one of the MX hosts.
 func DeliverMessage(from, to string, data []byte) error {
 	domain, err := ExtractDomain(to)
@@ -19,7 +21,7 @@ func DeliverMessage(from, to string, data []byte) error {
 	}
 	var lastErr error
 	for _, mx := range mxRecords {
-		err = Deliver(mx.Host, from, to, data)
+		err = deliverFunc(mx.Host, from, to, data)
 		if err == nil {
 			return nil
 		}

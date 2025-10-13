@@ -16,8 +16,10 @@ func init() {
 }
 
 // ResolveMX returns a sorted list of MX records for a domain.
+var mxLookup = net.LookupMX
+
 func ResolveMX(domain string) ([]*net.MX, error) {
-	records, err := net.LookupMX(domain)
+	records, err := mxLookup(domain)
 	if err != nil {
 		return nil, err
 	}

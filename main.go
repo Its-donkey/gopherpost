@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/hex"
@@ -50,11 +51,17 @@ func main() {
 		banner = defaultBanner
 	}
 
-	healthServer := health.StartHealthServer(healthAddr)
+	healthServer, healthListener, err := health.StartHealthServer(healthAddr)
+	if err != nil {
+		log.Fatalf("Failed to start health server: %v", err)
+	}
 	defer func() {
-		_ = healthServer.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = healthServer.Shutdown(ctx)
+		_ = healthListener.Close()
 	}()
-	log.Printf("Health endpoint listening on %s/healthz", healthAddr)
+	log.Printf("Health endpoint listening on %s/healthz", healthListener.Addr().String())
 
 	q := queue.NewManager()
 	q.Start()
@@ -85,6 +92,11 @@ func main() {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Printf("Accept error: %v", err)
+			continue
+		}
+		if !isLocalhost(conn.RemoteAddr()) {
+			audit.Log("rejecting non-local connection from %s", conn.RemoteAddr())
+			_ = conn.Close()
 			continue
 		}
 		go handleSession(conn, q, banner)
@@ -231,10 +243,10 @@ func handleSession(conn net.Conn, q *queue.Manager, banner string) {
 					break
 				}
 				queued = append(queued, queue.QueuedMessage{
-					ID:       messageID,
-					From:     from,
-					To:       rcpt,
-					Payload:  payload,
+					ID:      messageID,
+					From:    from,
+					To:      rcpt,
+					Payload: payload,
 				})
 			}
 			if persistErr != nil {
@@ -271,4 +283,15 @@ func shortID() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
 	return hex.EncodeToString(b)
+}
+
+func isLocalhost(addr net.Addr) bool {
+	tcp, ok := addr.(*net.TCPAddr)
+	if !ok {
+		return false
+	}
+	if tcp.IP == nil {
+		return false
+	}
+	return tcp.IP.IsLoopback()
 }

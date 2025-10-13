@@ -10,9 +10,11 @@ import (
 
 const heloName = "smtpserver.local"
 
+var smtpPort = "25"
+
 // Deliver attempts SMTP delivery to a given host with raw message data.
 func Deliver(host string, from string, to string, data []byte) error {
-	addr := net.JoinHostPort(host, "25")
+	addr := net.JoinHostPort(host, smtpPort)
 	dialer := &net.Dialer{Timeout: 30 * time.Second}
 	conn, err := dialer.Dial("tcp", addr)
 	if err != nil {

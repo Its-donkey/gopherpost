@@ -12,6 +12,7 @@ This standalone SMTP server is implemented entirely with the Go standard library
 - Outbound delivery with MX lookup, opportunistic STARTTLS, and jittered retry queue.
 - Server-side message size limit (10 MiB) to guard against resource exhaustion.
 - Built-in instrumentation exposed via `/metrics` (expvar format).
+- Access restricted to localhost clients to prevent unintended relaying.
 
 ## Usage
 
@@ -33,7 +34,7 @@ This server is configured entirely through environment variables:
 - `SMTP_DEBUG` – Set to `1` to enable verbose audit logging.
 - `SMTP_TLS_CERT` / `SMTP_TLS_KEY` – Enable TLS when both are provided.
 
-**Security note:** the server does not implement authentication and is intended for controlled environments (local testing, integration pipelines). Restrict network access, run as a non-root service account, and avoid exposing it to the public internet.
+**Security note:** the server only accepts SMTP sessions from `localhost` and does not implement authentication. It is intended for controlled environments (local testing, integration pipelines). Run as a non-root service account and avoid exposing it to the public internet.
 
 ## Retrieving Stored Messages
 

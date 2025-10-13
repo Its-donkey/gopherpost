@@ -47,7 +47,7 @@ func Domain(address string) (string, error) {
 		return "", fmt.Errorf("%w: missing domain", ErrInvalidAddress)
 	}
 
-	domain := address[at+1:]
+	domain := strings.ToLower(address[at+1:])
 	domain = strings.TrimSuffix(domain, ".")
 	domain = strings.TrimSpace(domain)
 	if domain == "" {
