@@ -1,7 +1,34 @@
 /* file name — /Users/jeff/styles/wrap.css */
 /* Wrap long text and code nicely */
-html, body, p, li { overflow-wrap: anywhere; word-break: normal; }
-pre code, code, kbd, samp {
-  white-space: pre-wrap;      /* allow wrapping inside code blocks */
-  overflow-wrap: anywhere;    /* break very long tokens/URLs */
+html, 
+body {margin: 0 auto;
+max-width: 40em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;}
+
+p, li { overflow-wrap: anywhere; word-break: normal; }
+pre code,
+code,
+kbd,
+samp {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+pre.sourceCode,
+pre.sourceCode code,
+pre > code.sourceCode {
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word;
+}
+
+.sourceCode {
+  text-wrap-mode: pretty;
 }

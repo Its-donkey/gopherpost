@@ -38,6 +38,7 @@ SMTP_DEBUG # Enable verbose audit logging when `true` (default `false`).
 SMTP_HEALTH_ADDR # Listen address for the health server (default :8080).  
 SMTP_HEALTH_PORT # Override only the port component of the health address (e.g. 9090).  
 SMTP_HEALTH_DISABLE # Disable the health endpoint when `true` (default `false`).  
+SMTP_QUEUE_PATH # Directory used to persist inbound messages (default ./data/spool).  
 ```
 #### Access control
 
@@ -69,7 +70,7 @@ Messages are persisted automatically. On-disk filenames include a message identi
 
 ## Example Session
 
-```
+```bash
 $ telnet localhost 2525
 Trying 127.0.0.1...
 Connected to localhost.
@@ -102,7 +103,7 @@ It performs MX preference sorting, randomises equal-priority records, and upgrad
 Messages that fail to deliver are automatically retried with capped exponential backoff and jitter to avoid thundering herd effects.
 
 ## Message Persistence
-Incoming messages are saved to disk under `./data/spool/YYYY-MM-DD/`. Override the directory by calling `storage.SetBaseDir` before accepting traffic (useful for tests or containerised deployments).  
+Incoming messages are saved to disk under `./data/spool/YYYY-MM-DD/` by default. Override the directory by setting `SMTP_QUEUE_PATH` or by calling `storage.SetBaseDir` before accepting traffic (useful for tests or containerised deployments).  
 
 ## Running the Server
 Set `SMTP_PORT=2525` (or any open port) and run:

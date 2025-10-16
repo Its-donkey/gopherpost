@@ -87,6 +87,10 @@ func main() {
 	}
 
 	q := queue.NewManager()
+	if dir := strings.TrimSpace(os.Getenv("SMTP_QUEUE_PATH")); dir != "" {
+		storage.SetBaseDir(dir)
+		log.Printf("Queue storage path set to %s", dir)
+	}
 	q.Start()
 	defer q.Stop()
 
