@@ -6,9 +6,9 @@ import (
 	"net"
 	"net/smtp"
 	"time"
-)
 
-const heloName = "smtpserver.local"
+	"smtpserver/internal/config"
+)
 
 var smtpPort = "25"
 
@@ -32,6 +32,7 @@ func Deliver(host string, from string, to string, data []byte) error {
 	}
 	defer client.Close()
 
+	heloName := config.Hostname()
 	if err := client.Hello(heloName); err != nil {
 		return fmt.Errorf("helo: %w", err)
 	}
@@ -45,8 +46,11 @@ func Deliver(host string, from string, to string, data []byte) error {
 		if err := client.StartTLS(tlsConf); err != nil {
 			return fmt.Errorf("starttls: %w", err)
 		}
-		if err := client.Hello(heloName); err != nil {
-			return fmt.Errorf("post-starttls helo: %w", err)
+		if err := client.Text.PrintfLine("EHLO %s", heloName); err != nil {
+			return fmt.Errorf("post-starttls ehlo write: %w", err)
+		}
+		if _, _, err := client.Text.ReadResponse(250); err != nil {
+			return fmt.Errorf("post-starttls ehlo: %w", err)
 		}
 	}
 

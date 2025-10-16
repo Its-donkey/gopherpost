@@ -14,13 +14,13 @@ func TestSetEnabled(t *testing.T) {
 }
 
 func TestRefreshFromEnv(t *testing.T) {
-	t.Setenv("SMTP_DEBUG", "1")
+	t.Setenv("SMTP_DEBUG", "true")
 	Set(false)
 	RefreshFromEnv()
 	if !Enabled() {
 		t.Fatalf("expected enabled after RefreshFromEnv")
 	}
-	t.Setenv("SMTP_DEBUG", "0")
+	t.Setenv("SMTP_DEBUG", "false")
 	RefreshFromEnv()
 	if Enabled() {
 		t.Fatalf("expected disabled when SMTP_DEBUG=0")

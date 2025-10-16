@@ -11,13 +11,18 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/netip"
 	"net/textproto"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	health "smtpserver/health"
 	audit "smtpserver/internal/audit"
+	"smtpserver/internal/config"
+	"smtpserver/internal/dkim"
 	"smtpserver/internal/email"
 	"smtpserver/internal/metrics"
 	"smtpserver/queue"
@@ -34,6 +39,7 @@ const (
 )
 
 func main() {
+	_ = godotenv.Load()
 	audit.RefreshFromEnv()
 
 	port := defaultSMTPPort
@@ -42,26 +48,43 @@ func main() {
 	}
 	addr := ":" + port
 
+	healthDisabled := config.Bool("SMTP_HEALTH_DISABLE", false)
+
 	healthAddr := defaultHealthAddr
 	if env := os.Getenv("SMTP_HEALTH_ADDR"); env != "" {
 		healthAddr = env
+	}
+	if port := os.Getenv("SMTP_HEALTH_PORT"); port != "" {
+		healthAddr = overridePort(healthAddr, port)
+	}
+	hostname := config.Hostname()
+	dkimSigner, err := dkim.LoadFromEnv()
+	if err != nil {
+		log.Fatalf("Failed to initialize DKIM: %v", err)
+	}
+	if dkimSigner != nil {
+		log.Printf("DKIM signing enabled (selector %s)", dkimSigner.Selector())
+		audit.Log("DKIM signing enabled selector %s domain %s", dkimSigner.Selector(), dkimSigner.Domain())
 	}
 	banner := os.Getenv("SMTP_BANNER")
 	if banner == "" {
 		banner = defaultBanner
 	}
+	greeting := fmt.Sprintf("%s %s", hostname, banner)
 
-	healthServer, healthListener, err := health.StartHealthServer(healthAddr)
-	if err != nil {
-		log.Fatalf("Failed to start health server: %v", err)
+	if healthDisabled {
+		log.Printf("Health server disabled via SMTP_HEALTH_DISABLE")
+	} else if healthServer, healthListener, err := health.StartHealthServer(healthAddr); err != nil {
+		log.Printf("Health server disabled: %v", err)
+	} else {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = healthServer.Shutdown(ctx)
+			_ = healthListener.Close()
+		}()
+		log.Printf("Health endpoint listening on %s/healthz", healthListener.Addr().String())
 	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = healthServer.Shutdown(ctx)
-		_ = healthListener.Close()
-	}()
-	log.Printf("Health endpoint listening on %s/healthz", healthListener.Addr().String())
 
 	q := queue.NewManager()
 	q.Start()
@@ -94,29 +117,38 @@ func main() {
 			log.Printf("Accept error: %v", err)
 			continue
 		}
-		if !isLocalhost(conn.RemoteAddr()) {
-			audit.Log("rejecting non-local connection from %s", conn.RemoteAddr())
-			_ = conn.Close()
-			continue
-		}
-		go handleSession(conn, q, banner)
+		go handleSession(conn, q, greeting, hostname, dkimSigner)
 	}
 }
 
-func handleSession(conn net.Conn, q *queue.Manager, banner string) {
+func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname string, signer *dkim.Signer) {
 	defer conn.Close()
 	tp := textproto.NewConn(conn)
 	defer tp.Close()
 
-	remote := conn.RemoteAddr().String()
-	audit.Log("session start %s", remote)
+	remoteAddr := conn.RemoteAddr()
+	remote := remoteAddr.String()
+	sessionID := shortID()
+	audit.Log("session %s start %s", sessionID, remote)
+	alog := func(format string, args ...any) {
+		prefixArgs := append([]any{sessionID}, args...)
+		audit.Log("session %s "+format, prefixArgs...)
+	}
+	if !connAllowed(remoteAddr) {
+		audit.Log("session %s rejected remote %s", sessionID, remote)
+		return
+	}
 	metrics.IncSessions()
 	defer metrics.DecSessions()
-	defer audit.Log("session closed %s", remote)
+	defer audit.Log("session %s closed %s", sessionID, remote)
+
+	requireLocalDomain := config.RequireSenderDomain()
+	expectedDomain := strings.ToLower(hostname)
 
 	timeout := commandDeadline
 	if err := conn.SetDeadline(time.Now().Add(timeout)); err != nil {
 		log.Printf("failed to set initial deadline: %v", err)
+		alog("set deadline failed: %v", err)
 		return
 	}
 
@@ -124,12 +156,14 @@ func handleSession(conn net.Conn, q *queue.Manager, banner string) {
 		t := fmt.Sprintf("%d %s", code, msg)
 		if err := tp.PrintfLine(t); err != nil {
 			log.Printf("send error to %s: %v", remote, err)
+			alog("send error: %v", err)
 			return false
 		}
+		alog("sent %d %s", code, msg)
 		return true
 	}
 
-	if !send(220, banner) {
+	if !send(220, greeting) {
 		return
 	}
 	var from string
@@ -146,37 +180,61 @@ func handleSession(conn net.Conn, q *queue.Manager, banner string) {
 	for {
 		if err := conn.SetDeadline(time.Now().Add(timeout)); err != nil {
 			log.Printf("failed to refresh deadline: %v", err)
+			alog("refresh deadline failed: %v", err)
 			return
 		}
 		line, err := tp.ReadLine()
 		if err != nil {
 			log.Printf("session error: %v", err)
+			alog("read error: %v", err)
 			return
 		}
+		alog("recv %s", summarizeCommand(line))
 		cmd := strings.ToUpper(line)
 		switch {
 		case strings.HasPrefix(cmd, "HELO") || strings.HasPrefix(cmd, "EHLO"):
-			if !send(250, "Hello") {
+			if !send(250, hostname) {
 				return
 			}
+			alog("handshake %s", cmd[:4])
 		case strings.HasPrefix(cmd, "MAIL FROM:"):
 			addr, err := email.ParseCommandAddress(line)
 			if err != nil {
 				if !send(501, "Invalid sender address") {
 					return
 				}
+				alog("invalid MAIL FROM: %v", err)
 				continue
+			}
+			if requireLocalDomain {
+				domain, derr := email.Domain(addr)
+				if derr != nil {
+					if !send(501, "Invalid sender domain") {
+						return
+					}
+					alog("invalid sender domain: %v", derr)
+					continue
+				}
+				if expectedDomain != "" && !strings.EqualFold(domain, expectedDomain) {
+					if !send(553, "Sender domain not permitted") {
+						return
+					}
+					alog("sender domain %s rejected (expected %s)", domain, expectedDomain)
+					continue
+				}
 			}
 			from = addr
 			to = nil
 			if !send(250, "Sender OK") {
 				return
 			}
+			alog("mail from %s", from)
 		case strings.HasPrefix(cmd, "RCPT TO:"):
 			if from == "" {
 				if !send(503, "Need MAIL command first") {
 					return
 				}
+				alog("RCPT before MAIL rejected")
 				continue
 			}
 			addr, err := email.ParseCommandAddress(line)
@@ -184,26 +242,31 @@ func handleSession(conn net.Conn, q *queue.Manager, banner string) {
 				if !send(501, "Invalid recipient address") {
 					return
 				}
+				alog("invalid RCPT TO: %v", err)
 				continue
 			}
 			to = append(to, addr)
 			if !send(250, "Recipient OK") {
 				return
 			}
+			alog("rcpt add %s (total=%d)", addr, len(to))
 		case strings.HasPrefix(cmd, "RSET"):
 			reset()
 			if !send(250, "State cleared") {
 				return
 			}
+			alog("state reset")
 		case strings.HasPrefix(cmd, "NOOP"):
 			if !send(250, "OK") {
 				return
 			}
+			alog("noop acknowledged")
 		case strings.HasPrefix(cmd, "DATA"):
 			if from == "" || len(to) == 0 {
 				if !send(503, "Need sender and recipient before DATA") {
 					return
 				}
+				alog("DATA before MAIL/RCPT rejected")
 				continue
 			}
 			messageID := shortID()
@@ -221,17 +284,32 @@ func handleSession(conn net.Conn, q *queue.Manager, banner string) {
 				if !send(554, "Read error") {
 					return
 				}
+				alog("dot-reader copy error: %v", err)
 				return
 			}
 			if limited.N <= 0 {
 				if !send(552, "Message exceeds size limit") {
 					return
 				}
+				alog("message exceeded max size (%d bytes)", maxMessageBytes)
 				reset()
 				continue
 			}
 
 			messageBytes := append([]byte(nil), data.Bytes()...)
+			if signer != nil {
+				signed, err := signer.Sign(messageBytes, from)
+				if err != nil {
+					if !send(451, "Requested action aborted: DKIM signing failure") {
+						return
+					}
+					alog("dkim signing error: %v", err)
+					reset()
+					continue
+				}
+				messageBytes = signed
+				alog("dkim signature applied")
+			}
 			payload := queue.NewPayload(messageBytes)
 			var queued []queue.QueuedMessage
 			var persistErr error
@@ -239,6 +317,7 @@ func handleSession(conn net.Conn, q *queue.Manager, banner string) {
 			for _, rcpt := range to {
 				if err := storage.SaveMessage(messageID, from, rcpt, messageBytes); err != nil {
 					log.Printf("failed to persist message for %s: %v", rcpt, err)
+					alog("storage error for %s: %v", rcpt, err)
 					persistErr = err
 					break
 				}
@@ -253,6 +332,7 @@ func handleSession(conn net.Conn, q *queue.Manager, banner string) {
 				if !send(451, "Requested action aborted: storage failure") {
 					return
 				}
+				alog("message %s aborted due to storage failure", messageID)
 				reset()
 				continue
 			}
@@ -262,17 +342,19 @@ func handleSession(conn net.Conn, q *queue.Manager, banner string) {
 			if !send(250, fmt.Sprintf("Message queued as %s", messageID)) {
 				return
 			}
-			audit.Log("message %s queued from %s to %d recipients", messageID, from, len(to))
+			alog("message %s queued (size=%d bytes, recipients=%d)", messageID, len(messageBytes), len(to))
 			reset()
 		case strings.HasPrefix(cmd, "QUIT"):
 			if !send(221, "Bye") {
 				return
 			}
+			alog("quit requested")
 			return
 		default:
 			if !send(502, "Command not implemented") {
 				return
 			}
+			alog("unhandled command: %s", summarizeCommand(line))
 		}
 	}
 }
@@ -285,13 +367,89 @@ func shortID() string {
 	return hex.EncodeToString(b)
 }
 
-func isLocalhost(addr net.Addr) bool {
-	tcp, ok := addr.(*net.TCPAddr)
-	if !ok {
+func connAllowed(addr net.Addr) bool {
+	if addr == nil {
 		return false
 	}
-	if tcp.IP == nil {
+	untyped := addr.String()
+	if untyped == "" {
 		return false
 	}
-	return tcp.IP.IsLoopback()
+	allowedNets := config.AllowedNetworks()
+	allowedHosts := config.AllowedHosts()
+	if len(allowedNets) == 0 && len(allowedHosts) == 0 {
+		return false
+	}
+	if len(allowedHosts) > 0 {
+		host := hostFromAddr(untyped)
+		hostLower := strings.ToLower(host)
+		for _, allowed := range allowedHosts {
+			if hostLower == allowed {
+				return true
+			}
+		}
+	}
+	if len(allowedNets) > 0 {
+		if ip := extractIP(addr); ip != nil {
+			for _, network := range allowedNets {
+				if network.Contains(ip) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func extractIP(addr net.Addr) net.IP {
+	switch v := addr.(type) {
+	case *net.TCPAddr:
+		return v.IP
+	case *net.UDPAddr:
+		return v.IP
+	default:
+		if host := hostFromAddr(addr.String()); host != "" {
+			if ip, err := netip.ParseAddr(host); err == nil {
+				return net.IP(ip.AsSlice())
+			}
+			return net.ParseIP(host)
+		}
+	}
+	return nil
+}
+
+func hostFromAddr(addr string) string {
+	if h, _, err := net.SplitHostPort(addr); err == nil {
+		return h
+	}
+	return addr
+}
+
+func overridePort(addr, port string) string {
+	port = strings.TrimSpace(port)
+	port = strings.TrimPrefix(port, ":")
+	if port == "" {
+		return addr
+	}
+
+	switch {
+	case addr == "", strings.HasPrefix(addr, ":"):
+		return ":" + port
+	case !strings.Contains(addr, ":"):
+		return addr + ":" + port
+	default:
+		host, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			return addr
+		}
+		return net.JoinHostPort(host, port)
+	}
+}
+
+func summarizeCommand(line string) string {
+	line = strings.TrimSpace(line)
+	if len(line) > 120 {
+		return line[:117] + "..."
+	}
+	return line
 }

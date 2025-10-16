@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"smtpserver/delivery"
+	audit "smtpserver/internal/audit"
 	"smtpserver/internal/metrics"
 )
 
@@ -45,6 +46,7 @@ func (m *Manager) Enqueue(msg QueuedMessage) {
 	}
 	m.queue = append(m.queue, msg)
 	log.Printf("Queued message %s for %s (attempt %d)", msg.ID, msg.To, msg.Attempts)
+	audit.Log("queue enqueue %s -> %s attempt %d next %s", msg.ID, msg.To, msg.Attempts, msg.NextRetry.Format(time.RFC3339))
 	metrics.MessagesQueued.Add(1)
 	metrics.SetQueueDepth(len(m.queue))
 }
@@ -96,6 +98,7 @@ func (m *Manager) processQueue() {
 		payload := msg.Payload
 		if payload == nil {
 			log.Printf("Skipping message %s for %s: missing payload", msg.ID, msg.To)
+			audit.Log("queue skip %s -> %s missing payload", msg.ID, msg.To)
 			continue
 		}
 
@@ -106,6 +109,7 @@ func (m *Manager) processQueue() {
 			msg.LastError = err.Error()
 			log.Printf("Retry %d for %s in %v (message %s): %v", msg.Attempts, msg.To, time.Until(msg.NextRetry), msg.ID, err)
 			metrics.DeliveryFailures.Add(1)
+			audit.Log("queue retry %s -> %s attempt %d next %s error %v", msg.ID, msg.To, msg.Attempts, msg.NextRetry.Format(time.RFC3339), err)
 
 			m.mu.Lock()
 			m.queue = append(m.queue, msg)
@@ -117,6 +121,7 @@ func (m *Manager) processQueue() {
 		msg.LastError = ""
 		log.Printf("Delivered message %s to %s", msg.ID, msg.To)
 		metrics.MessagesDelivered.Add(1)
+		audit.Log("queue delivered %s -> %s attempts %d", msg.ID, msg.To, msg.Attempts)
 	}
 }
 

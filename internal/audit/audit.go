@@ -2,8 +2,9 @@ package audit
 
 import (
 	"log"
-	"os"
 	"sync/atomic"
+
+	"smtpserver/internal/config"
 )
 
 var debug atomic.Bool
@@ -14,7 +15,7 @@ func init() {
 
 // RefreshFromEnv reloads the SMTP_DEBUG flag from the environment.
 func RefreshFromEnv() {
-	debug.Store(os.Getenv("SMTP_DEBUG") == "1")
+	debug.Store(config.Bool("SMTP_DEBUG", false))
 }
 
 // Set enables or disables audit logging programmatically.
@@ -27,7 +28,7 @@ func Enabled() bool {
 	return debug.Load()
 }
 
-// Log prints debug audit messages if SMTP_DEBUG=1 is set.
+// Log prints debug audit messages if SMTP_DEBUG=true is set.
 func Log(format string, args ...any) {
 	if !Enabled() {
 		return

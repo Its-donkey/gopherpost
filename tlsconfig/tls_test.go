@@ -17,6 +17,7 @@ import (
 )
 
 func TestLoadTLSConfigDisabled(t *testing.T) {
+	t.Setenv("SMTP_TLS_DISABLE", "true")
 	t.Setenv("SMTP_TLS_CERT", "")
 	t.Setenv("SMTP_TLS_KEY", "")
 
@@ -26,6 +27,26 @@ func TestLoadTLSConfigDisabled(t *testing.T) {
 	}
 	if conf != nil {
 		t.Fatalf("expected nil config when disabled")
+	}
+}
+
+func TestLoadTLSConfigEphemeral(t *testing.T) {
+	t.Setenv("SMTP_TLS_DISABLE", "false")
+	t.Setenv("SMTP_TLS_CERT", "")
+	t.Setenv("SMTP_TLS_KEY", "")
+
+	conf, err := LoadTLSConfig()
+	if err != nil {
+		t.Fatalf("LoadTLSConfig error: %v", err)
+	}
+	if conf == nil {
+		t.Fatalf("expected config, got nil")
+	}
+	if len(conf.Certificates) != 1 {
+		t.Fatalf("expected one certificate, got %d", len(conf.Certificates))
+	}
+	if _, err := conf.GetCertificate(&tls.ClientHelloInfo{}); err != nil {
+		t.Fatalf("GetCertificate error: %v", err)
 	}
 }
 

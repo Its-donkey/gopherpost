@@ -8,9 +8,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"smtpserver/internal/config"
 )
 
 func TestDeliverSuccess(t *testing.T) {
+	t.Setenv("SMTP_HOSTNAME", "smtpserver.test")
+	expectedHello := config.Hostname()
+
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen error: %v", err)
@@ -37,7 +42,7 @@ func TestDeliverSuccess(t *testing.T) {
 		fmt.Fprint(bw, "220 test ESMTP\r\n")
 		bw.Flush()
 
-		expectCommand(t, br, "EHLO "+heloName, "HELO "+heloName)
+		expectCommand(t, br, "EHLO "+expectedHello, "HELO "+expectedHello)
 		fmt.Fprint(bw, "250 OK\r\n")
 		bw.Flush()
 

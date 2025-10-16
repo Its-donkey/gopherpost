@@ -1,0 +1,7 @@
+/* file name — /Users/jeff/styles/wrap.css */
+/* Wrap long text and code nicely */
+html, body, p, li { overflow-wrap: anywhere; word-break: normal; }
+pre code, code, kbd, samp {
+  white-space: pre-wrap;      /* allow wrapping inside code blocks */
+  overflow-wrap: anywhere;    /* break very long tokens/URLs */
+}
