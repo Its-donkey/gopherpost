@@ -4,3 +4,5 @@
 *.cover
 smtpserver
 smtpserver.exe
+.env*
+build-html-wrap.sh
