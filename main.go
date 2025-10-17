@@ -25,6 +25,7 @@ import (
 	"smtpserver/internal/dkim"
 	"smtpserver/internal/email"
 	"smtpserver/internal/metrics"
+	"smtpserver/internal/version"
 	"smtpserver/queue"
 	"smtpserver/storage"
 	tlsconfig "smtpserver/tlsconfig"
@@ -41,6 +42,8 @@ const (
 func main() {
 	_ = godotenv.Load()
 	audit.RefreshFromEnv()
+	log.Printf("smtpserver version %s starting", version.Number)
+	audit.Log("version %s boot", version.Number)
 
 	port := defaultSMTPPort
 	if env := os.Getenv("SMTP_PORT"); env != "" {

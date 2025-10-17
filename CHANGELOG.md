@@ -1,7 +1,20 @@
 # Changelog
 
-## v0.1.0
-- Initial version with local message storage.
+## v0.4.0
+- Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
+- Updated health endpoint to flush `OK` and continuous audit output for real-time monitoring.
+- Expanded installer to validate queue directories, generate bespoke systemd units, and perform health probing.
+- Documented manual and automated deployment flows, including debug streaming notes.
+
+## v0.3.0
+- Hardened outbound delivery with opportunistic STARTTLS, HELO retries, and MX sorting.
+- Introduced reusable email parsing helpers with comprehensive tests.
+- Added secure on-disk storage with hashed recipient filenames and identifier sanitisation.
+- Improved retry queue with jittered exponential backoff and non-blocking delivery execution.
+- Enforced SMTP session state machine, configurable banner, and connection deadline refresh.
+- Added TLS defaults (TLS 1.2+) and safer listener initialisation.
+- Updated health server to use dedicated mux, timeouts, and surfaced errors.
+- Documented configuration, security considerations, and environment variables.
 
 ## v0.2.0
 - Added modular outbound SMTP delivery with MX lookup and STARTTLS support.
@@ -13,12 +26,5 @@
 - Added optional TLS via SMTP_TLS_CERT and SMTP_TLS_KEY.
 - Added /healthz HTTP endpoint for liveness checks.
 
-## v0.3.0
-- Hardened outbound delivery with opportunistic STARTTLS, HELO retries, and MX sorting.
-- Introduced reusable email parsing helpers with comprehensive tests.
-- Added secure on-disk storage with hashed recipient filenames and identifier sanitisation.
-- Improved retry queue with jittered exponential backoff and non-blocking delivery execution.
-- Enforced SMTP session state machine, configurable banner, and connection deadline refresh.
-- Added TLS defaults (TLS 1.2+) and safer listener initialisation.
-- Updated health server to use dedicated mux, timeouts, and surfaced errors.
-- Documented configuration, security considerations, and environment variables.
+## v0.1.0
+- Initial version with local message storage.

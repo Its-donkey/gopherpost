@@ -2,6 +2,8 @@
 
 This standalone SMTP server is implemented entirely with the Go standard library. It provides a minimal feature set suitable for local testing or development environments where an external mail transfer agent is not available.
 
+Current release: `v0.4.0`
+
 ## Features
 
 - RFC 5321 inspired command handling (HELO/EHLO, MAIL FROM, RCPT TO, DATA, RSET, NOOP, QUIT).  
@@ -13,16 +15,20 @@ This standalone SMTP server is implemented entirely with the Go standard library
 - Optional DKIM signing for outbound messages.
 - Server-side message size limit (10 MiB) to guard against resource exhaustion.
 - Built-in instrumentation exposed via `/metrics` (expvar format).  
-- Access restricted to localhost clients to prevent unintended relaying.
+- Allow-list based access control; traffic is rejected until `SMTP_ALLOW_NETWORKS` or `SMTP_ALLOW_HOSTS` is configured.
 
 ## Usage
 
+### Local quick start
+
 ```bash
-cd smtpserver
-# Build the binary
-go build
-# Or run directly
+cp .env.example .env
+# Set SMTP_ALLOW_NETWORKS or SMTP_ALLOW_HOSTS before starting
 go run ./...
+
+# or build a local binary
+go build -o smtpserver ./...
+./smtpserver
 ```
 
 ### Configuration
@@ -63,6 +69,48 @@ SMTP_DKIM_PRIVATE_KEY # Inline PEM-formatted DKIM private key (e.g. -----BEGIN R
 SMTP_DKIM_DOMAIN # Domain to sign messages as when overriding the sender domain (e.g. example.com).  
 ```
 **Security note:** configure `SMTP_ALLOW_NETWORKS`, `SMTP_ALLOW_HOSTS`, and `SMTP_REQUIRE_LOCAL_DOMAIN` to enforce ingress and sender restrictions. The server lacks authentication, so deploy behind firewalls or proxies and run as a non-root service account.
+
+Use an absolute path for `SMTP_QUEUE_PATH` when running the daemon under systemd so that the service `ReadWritePaths` setting can be aligned.
+
+## Deployment
+
+### Manual systemd installation
+
+Prerequisites: Linux host with systemd, Go 1.21 or newer, and root access.
+
+```bash
+# 1. Build the binary
+go build -o smtpserver ./...
+
+# 2. Create a dedicated user and runtime directories
+sudo useradd --system --home /opt/smtpserver --shell /usr/sbin/nologin smtpserver
+sudo install -d -o smtpserver -g smtpserver -m 0755 /opt/smtpserver /var/lib/smtpserver /var/spool/smtpserver
+sudo install -d -m 0755 /etc/smtpserver
+
+# 3. Install the binary and systemd unit
+sudo install -o root -g root -m 0755 smtpserver /usr/local/bin/smtpserver
+sudo install -m 0644 packaging/systemd/smtpserver.service /etc/systemd/system/smtpserver.service
+
+# 4. Configure environment
+sudo cp .env.example /etc/smtpserver/smtpserver.env
+sudo ${EDITOR:-nano} /etc/smtpserver/smtpserver.env
+#   - Set SMTP_ALLOW_NETWORKS or SMTP_ALLOW_HOSTS to the networks/hosts you trust
+#   - Ensure SMTP_QUEUE_PATH=/var/spool/smtpserver (or adjust the unit's ReadWritePaths accordingly)
+
+# 5. Activate the service
+sudo systemctl daemon-reload
+sudo systemctl enable --now smtpserver
+```
+
+### Automatic systemd installation
+
+The `install.sh` helper automates the same steps, generates a tailored unit file, and performs an optional health check. Run it as root:
+
+```bash
+sudo ./install.sh
+```
+
+You will be prompted for the environment values (defaults are shown inline). The script will build the binary, create required directories, install the service to `/etc/systemd/system/smtpserver.service`, reload systemd, and start the daemon. Provide an absolute `SMTP_QUEUE_PATH` so the generated `ReadWritePaths` remain valid.
 
 ## Retrieving Stored Messages
 
@@ -105,21 +153,8 @@ Messages that fail to deliver are automatically retried with capped exponential 
 ## Message Persistence
 Incoming messages are saved to disk under `./data/spool/YYYY-MM-DD/` by default. Override the directory by setting `SMTP_QUEUE_PATH` or by calling `storage.SetBaseDir` before accepting traffic (useful for tests or containerised deployments).  
 
-## Running the Server
-Set `SMTP_PORT=2525` (or any open port) and run:
-```
-go run .
-```
-
 ## Debugging and Auditing
-Set `SMTP_DEBUG=1` to enable verbose delivery logs.
-
-## Systemd Integration
-Copy `smtpserver.service` to `/etc/systemd/system/` and run:
-```bash
-sudo systemctl enable smtpserver
-sudo systemctl start smtpserver
-```
+Set `SMTP_DEBUG=true` to enable verbose delivery logs.
 
 ## TLS Support
 Set `SMTP_TLS_CERT` and `SMTP_TLS_KEY` to enable STARTTLS. Certificates are served with a minimum TLS version of 1.2.
@@ -128,3 +163,4 @@ The outbound client upgrades to TLS when the remote server advertises the capabi
 ## Health Checks & Metrics
 An HTTP endpoint is available at `:8080/healthz` (override via `SMTP_HEALTH_ADDR`) for readiness/liveness probes. If the configured port cannot be bound the SMTP server continues without the health listener.
 Structured metrics are exported at `/metrics` in expvar JSON format whenever the health server is running.
+When `SMTP_DEBUG=true`, visiting the `/healthz` endpoint renders `OK` followed by a live stream of audit log entries so you can tail activity from a browser or `curl`.
