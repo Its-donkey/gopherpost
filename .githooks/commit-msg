@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+msg_file="$1"
+subject=$(sed -n '1p' "$msg_file")
+
+re='^(feat|fix|hotfix|design|refactor|test|doc) \([^):]+\): .+'
+if [[ ! "$subject" =~ $re ]]; then
+  echo "ERROR: Commit message must match '<type-short> (section): message'." >&2
+  echo "Allowed type-short: feat, fix, hotfix, design, refactor, test, doc." >&2
+  echo "Got: $subject" >&2
+  exit 1
+fi
+
+exit 0
+
