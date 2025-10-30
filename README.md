@@ -164,3 +164,34 @@ The outbound client upgrades to TLS when the remote server advertises the capabi
 An HTTP endpoint is available at `:8080/healthz` (override via `SMTP_HEALTH_ADDR`) for readiness/liveness probes. If the configured port cannot be bound the SMTP server continues without the health listener.
 Structured metrics are exported at `/metrics` in expvar JSON format whenever the health server is running.
 When `SMTP_DEBUG=true`, visiting the `/healthz` endpoint renders `OK` followed by a live stream of audit log entries so you can tail activity from a browser or `curl`.
+
+## Contributing
+- Enable local Git hooks for commit and branch checks:
+  - `git config core.hooksPath .githooks`
+- Branch naming: `type/section/kebab-feature` (e.g., `feature/queue/retry-jitter`).
+- Commit style: `<type-short> (section): <message>`
+  - type-short: feat, fix, hotfix, design, refactor, test, doc
+- PR template fields: include `Type:` and `Section:` at the top of the description.
+- Update `CHANGELOG.md` for every PR unless you apply the `no-changelog` label.
+
+Example commit subject
+`refactor (module): rename module and imports to gopherpost`
+
+Example PR body
+```
+Type: refactor
+Section: module
+Summary:
+
+Rename module path and all imports to `gopherpost`.
+
+Changes
+- Update `go.mod` module path
+- Update internal imports
+- Adjust tests
+
+Checklist
+- [x] CHANGELOG.md updated
+- [x] Branch name follows convention
+- [x] Commits follow convention
+```
