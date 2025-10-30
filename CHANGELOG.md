@@ -13,6 +13,8 @@
 
 - CI: Add GitHub Action to enforce CHANGELOG updates on every PR, branch naming (`type/section/kebab-feature`), and commit style (`<type-short> (section): message`).
 - PRs: Add pull request template with required fields and checklist.
+- CI: Validate PR body includes required 'Type:' and 'Section:' fields from the template.
+- DevX: Add in-repo Git hooks under `.githooks/` (`pre-commit` to require CHANGELOG and branch pattern, `commit-msg` to enforce commit subject). Enable with: `git config core.hooksPath .githooks`.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
