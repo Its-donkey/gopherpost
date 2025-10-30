@@ -1,0 +1,79 @@
+name: Changelog and Conventions
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  verify:
+    name: Verify changelog and conventions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+          EVENT_PATH: ${{ github.event_path }}
+        run: |
+          set -euo pipefail
+
+          echo "Base: $BASE"
+          echo "Head: $HEAD"
+          echo "Branch: $HEAD_REF"
+
+          # Collect labels from event payload (fallback empty)
+          LABELS=$(jq -r '.pull_request.labels[].name' "$EVENT_PATH" 2>/dev/null || true)
+          echo "Labels: ${LABELS:-<none>}"
+
+          # Determine changed files between base and head
+          CHANGED=$(git diff --name-only "$BASE...$HEAD")
+          echo "Changed files:\n$CHANGED"
+
+          # If label 'no-changelog' present, skip changelog check
+          NEEDS_CHANGELOG=true
+          if echo "$LABELS" | grep -qi '^no-changelog$'; then
+            NEEDS_CHANGELOG=false
+            echo "Bypassing changelog check due to 'no-changelog' label"
+          fi
+
+          # Require CHANGELOG.md modification if not bypassed
+          if [ "$NEEDS_CHANGELOG" = true ]; then
+            if ! echo "$CHANGED" | grep -q '^CHANGELOG.md$'; then
+              echo "ERROR: CHANGELOG.md must be updated for this PR (add 'no-changelog' label to bypass if truly unnecessary)." >&2
+              exit 1
+            fi
+          fi
+
+          # Enforce branch naming convention
+          # <type>/<section>/<kebab-feature>
+          if ! echo "$HEAD_REF" | grep -Eq '^(feature|bugfix|hotfix|design|refactor|test|doc)/[^/]+/[a-z0-9-]+$'; then
+            echo "ERROR: Branch name '$HEAD_REF' must match 'type/section/kebab-feature' with type in {feature,bugfix,hotfix,design,refactor,test,doc}." >&2
+            exit 1
+          fi
+
+          # Map types to short prefixes for commit subjects
+          SHORT_RE='(feat|fix|hotfix|design|refactor|test|doc) \([^):]+\): .+'
+
+          # Validate commit messages in the PR range
+          bad=0
+          while IFS= read -r subject; do
+            if ! printf '%s' "$subject" | grep -Eq "$SHORT_RE"; then
+              echo "Invalid commit subject: $subject" >&2
+              bad=$((bad+1))
+            fi
+          done < <(git log --pretty=%s "$BASE..$HEAD")
+
+          if [ "$bad" -ne 0 ]; then
+            echo "ERROR: One or more commit messages do not follow '<type-short> (section): message' format." >&2
+            echo "Allowed type-short: feat, fix, hotfix, design, refactor, test, doc." >&2
+            exit 1
+          fi
+
+          echo "All checks passed."
+
