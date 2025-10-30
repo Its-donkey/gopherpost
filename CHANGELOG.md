@@ -15,6 +15,7 @@
 - PRs: Add pull request template with required fields and checklist.
 - CI: Validate PR body includes required 'Type:' and 'Section:' fields from the template.
 - DevX: Add in-repo Git hooks under `.githooks/` (`pre-commit` to require CHANGELOG and branch pattern, `commit-msg` to enforce commit subject). Enable with: `git config core.hooksPath .githooks`.
+- Docs: Add CONTRIBUTING.md and README Contributing section with examples.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
