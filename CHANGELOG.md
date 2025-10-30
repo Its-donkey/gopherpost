@@ -8,8 +8,11 @@
   - Installer `install.sh` updated to build/install `gopherpost` and generate the new unit and directories.
   - Documentation, examples, and `.env.example` updated accordingly.
   - TLS certificate test subjects now use `gopherpost.*` names; ephemeral cert CN/Org align with new name.
-  - .gitignore includes `gopherpost` binaries.
-  - No changes to `SMTP_*` environment variable names or behavior.
+- .gitignore includes `gopherpost` binaries.
+- No changes to `SMTP_*` environment variable names or behavior.
+
+- CI: Add GitHub Action to enforce CHANGELOG updates on every PR, branch naming (`type/section/kebab-feature`), and commit style (`<type-short> (section): message`).
+- PRs: Add pull request template with required fields and checklist.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
