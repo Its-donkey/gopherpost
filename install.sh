@@ -16,7 +16,7 @@ NAME="GopherPost SMTP Server"
 URL="gopherpost.io"
 
 # Derive lowercase + slug from NAME (portable on macOS Bash 3.2 and Linux)
-NAME_LOWER="$(printf '%s' "$NAME" | tr '[:upper:]' '[:lower:]')"
+NAME_LOWER="$(printf '%s' "${NAME%%[[:space:]]*}" | tr '[:upper:]' '[:lower:]')"
 NAME_SLUG="$(printf '%s' "$NAME_LOWER" | tr ' ' '-' | tr -cd 'a-z0-9-')"
 
 # Binary, user, group, paths derived from slug
