@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+- Rename project to GopherPost.
+  - Module path changed to `gopherpost`; updated all internal imports.
+  - Binary renamed to `gopherpost` and default banner to "GopherPost ready".
+  - Systemd unit renamed to `gopherpost.service`; updated user/group to `gopherpost` and paths under `/opt/gopherpost`, `/var/lib/gopherpost`, `/var/spool/gopherpost`, `/etc/gopherpost`.
+  - Installer `install.sh` updated to build/install `gopherpost` and generate the new unit and directories.
+  - Documentation, examples, and `.env.example` updated accordingly.
+  - TLS certificate test subjects now use `gopherpost.*` names; ephemeral cert CN/Org align with new name.
+  - .gitignore includes `gopherpost` binaries.
+  - No changes to `SMTP_*` environment variable names or behavior.
+
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
 - Updated health endpoint to flush `OK` and continuous audit output for real-time monitoring.
