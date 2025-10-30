@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"smtpserver/delivery"
-	audit "smtpserver/internal/audit"
-	"smtpserver/internal/metrics"
+    "gopherpost/delivery"
+    audit "gopherpost/internal/audit"
+    "gopherpost/internal/metrics"
 )
 
 var deliverFunc = delivery.DeliverMessage

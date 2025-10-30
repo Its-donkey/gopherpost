@@ -7,7 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"smtpserver/internal/config"
+    "gopherpost/internal/config"
 )
 
 var debug atomic.Bool

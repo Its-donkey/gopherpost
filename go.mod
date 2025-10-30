@@ -1,4 +1,4 @@
-module smtpserver
+module gopherpost
 
 go 1.21
 

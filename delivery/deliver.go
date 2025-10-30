@@ -3,7 +3,7 @@ package delivery
 import (
 	"fmt"
 
-	audit "smtpserver/internal/audit"
+    audit "gopherpost/internal/audit"
 )
 
 var deliverFunc = Deliver
