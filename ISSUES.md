@@ -1,10 +1,10 @@
 # Repository Review Checklist
 
 **.gitignore**
-- [x] `.gitignore` – add generated artifacts such as `./data/spool/`, coverage files, and `smtpserver` variants to avoid unintentionally committing payloads or binaries.
+- [x] `.gitignore` – add generated artifacts such as `./data/spool/`, coverage files, and `gopherpost` variants to avoid unintentionally committing payloads or binaries.
 
 **go.mod**
-- [x] `go.mod:1` – module path is `github.com/example/smtpserver`, but all imports use `smtpserver/...`; update either the module path or every import so the project builds.
+- [x] `go.mod:1` – module path is `github.com/example/gopherpost`, but all imports use `gopherpost/...`; update either the module path or every import so the project builds.
 - [x] `go.mod` – pin toolchain or add `//go:build` for Go version guarantees if 1.21 features are required.
 
 **CHANGELOG.md**
