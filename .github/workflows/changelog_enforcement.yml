@@ -31,6 +31,29 @@ jobs:
           LABELS=$(jq -r '.pull_request.labels[].name' "$EVENT_PATH" 2>/dev/null || true)
           echo "Labels: ${LABELS:-<none>}"
 
+          # Validate PR body includes required fields from the template
+          BODY=$(jq -r '.pull_request.body // ""' "$EVENT_PATH")
+          echo "PR body length: $(printf %s "$BODY" | wc -c | tr -d ' ')"
+          req_err=0
+          TYPE_LINE=$(printf '%s\n' "$BODY" | awk -F': ' '/^Type:/ {print $2; exit}')
+          SECTION_LINE=$(printf '%s\n' "$BODY" | awk -F': ' '/^Section:/ {print $2; exit}')
+          if [ -z "${TYPE_LINE:-}" ]; then
+            echo "ERROR: PR body must include a 'Type:' line." >&2
+            req_err=1
+          else
+            case "$TYPE_LINE" in
+              feature|bugfix|hotfix|design|refactor|test|doc) : ;;
+              *) echo "ERROR: Type must be one of: feature, bugfix, hotfix, design, refactor, test, doc (got '$TYPE_LINE')." >&2; req_err=1 ;;
+            esac
+          fi
+          if [ -z "${SECTION_LINE:-}" ] || printf '%s' "$SECTION_LINE" | grep -Eq '^<.*>$'; then
+            echo "ERROR: PR body must include a non-empty 'Section:' line (not a placeholder)." >&2
+            req_err=1
+          fi
+          if [ "$req_err" -ne 0 ]; then
+            exit 1
+          fi
+
           # Determine changed files between base and head
           CHANGED=$(git diff --name-only "$BASE...$HEAD")
           echo "Changed files:\n$CHANGED"
@@ -76,4 +99,3 @@ jobs:
           fi
 
           echo "All checks passed."
-
