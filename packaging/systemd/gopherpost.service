@@ -1,0 +1,27 @@
+[Unit]
+Description=Ship Shape Sharpening GopherPost SMTP Server v0.4.0
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gopherpost
+Group=gopherpost
+EnvironmentFile=/etc/gopherpost/gopherpost.env
+WorkingDirectory=/opt/gopherpost
+ExecStart=/usr/local/bin/gopherpost
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/gopherpost /var/spool/gopherpost /etc/gopherpost
+RuntimeDirectory=gopherpost
+StateDirectory=gopherpost
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

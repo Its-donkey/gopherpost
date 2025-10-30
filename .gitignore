@@ -4,6 +4,8 @@
 *.cover
 smtpserver
 smtpserver.exe
+gopherpost
+gopherpost.exe
 .env*
 build-html-wrap.sh
 .DS_Store
