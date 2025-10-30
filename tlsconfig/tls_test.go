@@ -78,12 +78,12 @@ func generateSelfSignedCert(t *testing.T, dir string) (string, string) {
 		t.Fatalf("GenerateKey: %v", err)
 	}
 
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(time.Now().UnixNano()),
-		Subject: pkix.Name{
-			CommonName:   "smtpserver.test",
-			Organization: []string{"smtpserver"},
-		},
+    template := &x509.Certificate{
+        SerialNumber: big.NewInt(time.Now().UnixNano()),
+        Subject: pkix.Name{
+            CommonName:   "gopherpost.test",
+            Organization: []string{"gopherpost"},
+        },
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(24 * time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,

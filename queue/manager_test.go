@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"smtpserver/internal/metrics"
+    "gopherpost/internal/metrics"
 )
 
 func TestManagerProcessQueueSuccess(t *testing.T) {
