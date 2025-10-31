@@ -27,8 +27,8 @@
 - Website: Publish contact email `gday@gopherpost.io` on site and README.
 - Website: Add favicon asset (`docs/assets/favicon.svg`) and wire it into the page.
 - Website: Add dedicated contact section with email and GitHub links.
-- Docs: Document current SMTP, delivery, storage, and observability capabilities in README.
-- Website: Surface current capabilities on the marketing page.
+- Docs: Consolidate feature list in README (single "Features" section).
+- Website: Mirror unified feature list on the marketing page.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.

@@ -139,7 +139,7 @@ main {
   color: var(--muted);
 }
 
-.capabilities-list {
+.feature-list {
   margin: 0;
   padding-left: 1.2rem;
   display: flex;
@@ -148,7 +148,7 @@ main {
   color: var(--muted);
 }
 
-.capabilities-list li {
+.feature-list li {
   line-height: 1.5;
 }
 

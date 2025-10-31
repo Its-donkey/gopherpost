@@ -5,27 +5,13 @@ This standalone SMTP server is implemented entirely with the Go standard library
 Current release: `v0.4.0`
 
 ## Features
-
-- RFC 5321 inspired command handling (HELO/EHLO, MAIL FROM, RCPT TO, DATA, RSET, NOOP, QUIT).  
-- Support for accepting multiple recipients per message.
-- Dot-stuffing handling inside the DATA section.
-- Connection deadline enforcement to mitigate idle clients.
-- Automatic message persistence with recipient hashing to protect sensitive metadata.
-- Outbound delivery with MX lookup, opportunistic STARTTLS, and jittered retry queue.
-- Optional DKIM signing for outbound messages.
-- Server-side message size limit (10 MiB) to guard against resource exhaustion.
-- Built-in instrumentation exposed via `/metrics` (expvar format).  
-- Allow-list based access control; traffic is rejected until `SMTP_ALLOW_NETWORKS` or `SMTP_ALLOW_HOSTS` is configured.
-
-## Current Capabilities
-- Implements the core SMTP verbs (HELO/EHLO, MAIL FROM, RCPT TO, DATA, RSET, NOOP, QUIT) with multi-recipient support, dot-stuffing awareness, message-size limits, and per-command deadlines to keep sessions well-behaved.
-- Enforces allow-listed access by IP/network or hostname before any SMTP banner is sent, providing a coarse ingress control layer for the unauthenticated listener.
-- Persists every accepted message to disk with per-recipient hashing to avoid exposing raw addresses, supporting later inspection or reprocessing.
-- Performs outbound delivery by resolving MX records, randomising equal-priority hosts, and attempting opportunistic STARTTLS upgrades before handing off the payload with retries managed by an in-memory queue and exponential backoff with jitter.
-- Optionally signs outbound messages with DKIM when the necessary selector, key, and domain information are supplied via environment variables.
-- Exposes a lightweight health server that serves readiness information, expvar-formatted metrics (queue depth, delivery counters, active sessions), and—when debug mode is enabled—a live audit log stream over HTTP.
-- Provides audit logging that can be toggled via environment variables and fanned out to subscribers, which the health endpoint leverages for streaming diagnostics.
-- Loads configuration strictly from environment variables (with .env support) for everything from ports and banner text to DKIM keys and queue location, simplifying containerised or systemd deployments.
+- Implements core SMTP verbs (HELO/EHLO, MAIL FROM, RCPT TO, DATA, RSET, NOOP, QUIT) with multi-recipient support, dot-stuffing handling, a 10 MiB message-size limit, and per-command deadlines to keep sessions responsive.
+- Enforces allow-listed access by host/IP before any banner is sent, adding a coarse ingress control layer for the unauthenticated listener.
+- Persists accepted messages to disk with per-recipient hashing so stored artefacts are private yet available for later inspection or reprocessing.
+- Performs outbound delivery via MX resolution, randomised equal-priority retries, opportunistic STARTTLS, and jittered exponential backoff managed by the in-memory queue.
+- Optionally signs outbound mail with DKIM when selector, key, and domain values are supplied through environment variables.
+- Provides built-in observability: a health server exposes readiness, `/metrics` instrumentation, and an optional live audit log stream; audit logging can be toggled at runtime and fanned out to subscribers.
+- Loads configuration entirely from environment variables (with `.env` support) covering ports, banner text, TLS/DKIM assets, and queue storage paths, simplifying containerised or systemd deployments.
 
 ## Project Website
 - Live overview: https://gopherpost.io
