@@ -63,7 +63,6 @@ header {
   height: 8rem;
   width: 8rem;
   border-radius: 50%;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.55);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -112,14 +111,19 @@ header {
 }
 
 .cta-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 14px 28px rgba(15, 30, 67, 0.35);
 }
 
 .cta-secondary {
   border: 1px solid rgba(255, 255, 255, 0.6);
   color: #fff;
   background: transparent;
+}
+.cta-secondary:hover {
+  color: #fff;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 14px 28px rgba(15, 30, 67, 0.35);
 }
 
 main {
