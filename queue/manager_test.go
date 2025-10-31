@@ -2,10 +2,12 @@ package queue
 
 import (
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
-    "gopherpost/internal/metrics"
+	"gopherpost/internal/metrics"
 )
 
 func TestManagerProcessQueueSuccess(t *testing.T) {
@@ -94,5 +96,78 @@ func TestManagerProcessQueueFailure(t *testing.T) {
 	}
 	if m.queue[0].LastError == "" {
 		t.Fatalf("expected LastError to be recorded")
+	}
+}
+
+func TestManagerStopIdempotent(t *testing.T) {
+	m := NewManager()
+	m.Start()
+	m.Stop()
+	// second stop should not panic
+	m.Stop()
+}
+
+func TestManagerProcessQueueWorkerConcurrency(t *testing.T) {
+	metrics.ResetForTests()
+
+	originalDeliver := deliverFunc
+	defer func() { deliverFunc = originalDeliver }()
+
+	var mu sync.Mutex
+	current := 0
+	max := 0
+
+	deliverFunc = func(from, to string, data []byte) error {
+		mu.Lock()
+		current++
+		if current > max {
+			max = current
+		}
+		mu.Unlock()
+
+		time.Sleep(10 * time.Millisecond)
+
+		mu.Lock()
+		current--
+		mu.Unlock()
+
+		return nil
+	}
+
+	makeMessage := func(id int) QueuedMessage {
+		return QueuedMessage{
+			ID:        fmt.Sprintf("msg-%d", id),
+			From:      "sender@example.com",
+			To:        fmt.Sprintf("rcpt-%d@example.net", id),
+			Payload:   NewPayload([]byte("body")),
+			Attempts:  1,
+			NextRetry: time.Now().Add(-time.Second),
+		}
+	}
+
+	measure := func(workers int) int {
+		m := NewManager(WithWorkers(workers))
+		for i := 0; i < 6; i++ {
+			m.Enqueue(makeMessage(workers*100 + i))
+		}
+
+		mu.Lock()
+		current = 0
+		max = 0
+		mu.Unlock()
+
+		m.processQueue()
+
+		mu.Lock()
+		defer mu.Unlock()
+		return max
+	}
+
+	if serialMax := measure(1); serialMax != 1 {
+		t.Fatalf("expected serial worker to max at 1 concurrent delivery, got %d", serialMax)
+	}
+
+	if parallelMax := measure(4); parallelMax <= 1 {
+		t.Fatalf("expected parallel workers to exceed 1 concurrent delivery, got %d", parallelMax)
 	}
 }
