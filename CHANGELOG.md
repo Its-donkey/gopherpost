@@ -8,8 +8,17 @@
   - Installer `install.sh` updated to build/install `gopherpost` and generate the new unit and directories.
   - Documentation, examples, and `.env.example` updated accordingly.
   - TLS certificate test subjects now use `gopherpost.*` names; ephemeral cert CN/Org align with new name.
-  - .gitignore includes `gopherpost` binaries.
-  - No changes to `SMTP_*` environment variable names or behavior.
+- .gitignore includes `gopherpost` binaries.
+- No changes to `SMTP_*` environment variable names or behavior.
+
+- CI: Add GitHub Action to enforce CHANGELOG updates on every PR, branch naming (`type/section/kebab-feature`), and commit style (`<type-short> (section): message`).
+- PRs: Add pull request template with required fields and checklist.
+- CI: Validate PR body includes required 'Type:' and 'Section:' fields from the template.
+- DevX: Add in-repo Git hooks under `.githooks/` (`pre-commit` to require CHANGELOG and branch pattern, `commit-msg` to enforce commit subject). Enable with: `git config core.hooksPath .githooks`.
+- Docs: Add CONTRIBUTING.md and README Contributing section with examples.
+- Repo: Update .gitignore to ignore VS Code settings (`.vscode/*`) and workspace files (`*.code-workspace`).
+- Installer: Improve slug derivation for NAME_LOWER to avoid spaces in slug.
+- Packaging: Update systemd unit description to "GopherPost SMTP Server".
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.

@@ -9,3 +9,5 @@ gopherpost.exe
 .env*
 build-html-wrap.sh
 .DS_Store
+.vscode/*
+*.code-workspace

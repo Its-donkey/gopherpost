@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Enforce changelog updates and branch naming before commit.
+
+# Allow bypass via env var
+if [[ "${NO_CHANGELOG:-}" == "1" ]]; then
+  exit 0
+fi
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+if ! [[ "$branch" =~ ^(feature|bugfix|hotfix|design|refactor|test|doc)/[^/]+/[a-z0-9-]+$ ]]; then
+  echo "ERROR: Branch name '$branch' must match type/section/kebab-feature." >&2
+  exit 1
+fi
+
+# Files staged for commit
+mapfile -t staged < <(git diff --cached --name-only)
+if [[ ${#staged[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+# If any files besides CHANGELOG.md are being committed, require CHANGELOG.md too
+needs_changelog=false
+has_changelog=false
+for f in "${staged[@]}"; do
+  if [[ "$f" == "CHANGELOG.md" ]]; then
+    has_changelog=true
+  else
+    # Ignore commits that only touch CI, docs templates, or markdown docs? Still require changelog by default.
+    needs_changelog=true
+  fi
+done
+
+if $needs_changelog && ! $has_changelog; then
+  echo "ERROR: CHANGELOG.md must be included in the commit. Set NO_CHANGELOG=1 to bypass intentionally." >&2
+  exit 1
+fi
+
+exit 0
+
