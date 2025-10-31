@@ -25,6 +25,7 @@
 - Website: Embed Google Analytics (G-DWM55QD5ZH) in the static site.
 - Website: Configure custom domain via `docs/CNAME` and document at gopherpost.io.
 - Website: Publish contact email `gday@gopherpost.io` on site and README.
+- Website: Add favicon asset (`docs/assets/favicon.svg`) and wire it into the page.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
