@@ -33,7 +33,8 @@
 - Storage: Roll back partially persisted messages when any recipient write fails to keep the spool aligned with the delivery queue.
 - Queue: Introduce a configurable worker pool with idempotent shutdown semantics and tests that verify real concurrency instead of timing heuristics.
 - Config: Document and surface the new `SMTP_QUEUE_WORKERS` environment variable across README, `.env.example`, install tooling, and the marketing site.
-- Brand: Refresh GopherPost logo and favicon with updated gopher-and-envelope concept; refine site header hover styling and add ringed-logo hover treatment.
+- Brand: Refresh GopherPost logo and favicon with updated gopher-and-envelope concept; refine site header hover styling.
+- Brand: Refresh GopherPost logo and favicon with updated gopher-and-envelope concept; add site styling for ringed logo hover state.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
