@@ -30,10 +30,8 @@
     </g>
     <path d="M56 83h16" stroke="#0f2f6f" stroke-width="2" stroke-linecap="round"/>
   </g>
-  <g stroke="#1f4ea8" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+  <g stroke="#1fa841" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
     <path d="M40 78h48a8 8 0 0 1 8 8v14a8 8 0 0 1-8 8H40a8 8 0 0 1-8-8V86a8 8 0 0 1 8-8z" fill="url(#gp-env)"/>
-    <path d="M32 82l32 22 32-22" fill="none"/>
-    <path d="M32 108l18-16" fill="none"/>
-    <path d="M96 108l-18-16" fill="none"/>
+    <path d="M33 82l32 22 30-22" fill="none"/>
   </g>
 </svg>
