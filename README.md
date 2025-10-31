@@ -17,6 +17,16 @@ Current release: `v0.4.0`
 - Built-in instrumentation exposed via `/metrics` (expvar format).  
 - Allow-list based access control; traffic is rejected until `SMTP_ALLOW_NETWORKS` or `SMTP_ALLOW_HOSTS` is configured.
 
+## Current Capabilities
+- Implements the core SMTP verbs (HELO/EHLO, MAIL FROM, RCPT TO, DATA, RSET, NOOP, QUIT) with multi-recipient support, dot-stuffing awareness, message-size limits, and per-command deadlines to keep sessions well-behaved.
+- Enforces allow-listed access by IP/network or hostname before any SMTP banner is sent, providing a coarse ingress control layer for the unauthenticated listener.
+- Persists every accepted message to disk with per-recipient hashing to avoid exposing raw addresses, supporting later inspection or reprocessing.
+- Performs outbound delivery by resolving MX records, randomising equal-priority hosts, and attempting opportunistic STARTTLS upgrades before handing off the payload with retries managed by an in-memory queue and exponential backoff with jitter.
+- Optionally signs outbound messages with DKIM when the necessary selector, key, and domain information are supplied via environment variables.
+- Exposes a lightweight health server that serves readiness information, expvar-formatted metrics (queue depth, delivery counters, active sessions), and—when debug mode is enabled—a live audit log stream over HTTP.
+- Provides audit logging that can be toggled via environment variables and fanned out to subscribers, which the health endpoint leverages for streaming diagnostics.
+- Loads configuration strictly from environment variables (with .env support) for everything from ports and banner text to DKIM keys and queue location, simplifying containerised or systemd deployments.
+
 ## Project Website
 - Live overview: https://gopherpost.io
 - Fallback GitHub Pages URL: https://its-donkey.github.io/smtpserver/
