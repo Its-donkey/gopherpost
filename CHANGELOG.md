@@ -29,7 +29,7 @@
 - Website: Add dedicated contact section with email and GitHub links.
 - Docs: Consolidate feature list in README (single "Features" section).
 - Website: Mirror unified feature list on the marketing page.
-- Brand: Refresh GopherPost logo and favicon with updated gopher-and-envelope concept.
+- Brand: Refresh GopherPost logo and favicon with updated gopher-and-envelope concept; refine site header hover styling.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
