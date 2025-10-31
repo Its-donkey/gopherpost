@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GopherPost — Modern SMTP Server for Developers</title>
+    <meta
+      name="description"
+      content="GopherPost is a batteries-included SMTP server written in Go with DKIM, queueing, observability, and systemd deployment helpers."
+    />
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <nav class="nav">
+          <a class="logo" href="#top">
+            <img src="assets/logo.svg" alt="GopherPost logo" />
+            <span>GopherPost</span>
+          </a>
+          <div class="cta-group">
+            <a class="cta cta-secondary" href="https://github.com/Its-donkey/smtpserver">View on GitHub</a>
+            <a class="cta cta-primary" href="#get-started">Get Started</a>
+          </div>
+        </nav>
+
+        <div class="hero">
+          <h1>Reliable SMTP for modern workflows.</h1>
+          <p>
+            GopherPost is an auditable, queue-backed SMTP service written in Go. It ships with DKIM support,
+            TLS, health checks, and a systemd installer so you can deliver mail from development to production with confidence.
+          </p>
+          <div class="cta-group">
+            <a class="cta cta-primary" href="https://github.com/Its-donkey/smtpserver#usage">Start Sending</a>
+            <a class="cta cta-secondary" href="https://github.com/Its-donkey/smtpserver/blob/main/README.md">Read the docs</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="container">
+        <section>
+          <div class="grid features">
+            <article class="card">
+              <h3>Secure delivery pipeline</h3>
+              <p>Supports TLS, DKIM signing, and per-recipient queueing with jittered retries and observability built in.</p>
+            </article>
+            <article class="card">
+              <h3>Operations ready</h3>
+              <p>Health endpoints, metrics, audit streaming, and a systemd unit generator make deployment predictable.</p>
+            </article>
+            <article class="card">
+              <h3>Simple configuration</h3>
+              <p>Toggle behaviour with environment variables and `.env` files—no database required.</p>
+            </article>
+            <article class="card">
+              <h3>Fast Go foundation</h3>
+              <p>Built with Go 1.21+, leaning on the standard library so you get portability and performance.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="get-started" class="grid" style="gap: 1.5rem;">
+          <div class="highlight">
+            <h2>Install in minutes</h2>
+            <p>Build locally or run the guided installer for a hardened systemd deployment.</p>
+          </div>
+          <pre class="code-block"><code>$ git clone https://github.com/Its-donkey/smtpserver.git
+$ cd smtpserver
+$ go build -o gopherpost ./...
+$ ./gopherpost</code></pre>
+          <div class="card">
+            <h3>Need systemd?</h3>
+            <p>
+              Run <code>sudo ./install.sh</code> to generate a tailored unit file, provision directories, and launch the service.
+              The installer walks you through TLS, DKIM, and queue settings.
+            </p>
+          </div>
+        </section>
+
+        <section class="grid" style="gap: 1.5rem;">
+          <div class="card">
+            <h3>Observability baked in</h3>
+            <p>
+              Stream audit logs from <code>/healthz</code>, expose metrics via <code>/metrics</code>, and monitor queue depth with
+              built-in counters.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Extensible by design</h3>
+            <p>
+              The codebase is organized by domain—delivery, queue, storage—making it easy to adapt to custom workflows or plug into
+              your infrastructure.
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <div class="footer-content">
+        <span>&copy; <span id="year"></span> GopherPost.</span>
+        <span>
+          Crafted with Go · <a href="https://github.com/Its-donkey/smtpserver/blob/main/CHANGELOG.md">Changelog</a> ·
+          <a href="https://github.com/Its-donkey/smtpserver/blob/main/CONTRIBUTING.md">Contributing</a>
+        </span>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>

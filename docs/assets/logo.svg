@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">GopherPost Logo</title>
+  <desc id="desc">Simplified envelope with gopher ears on a circular gradient</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d7ff9"/>
+      <stop offset="100%" stop-color="#1555c0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="url(#bg)"/>
+  <path d="M36 36c3.8-7 10.3-12 18-12s14.2 5 18 12c1.7-6 6.2-10 11.5-10 6.6 0 12 6.3 12 14.1 0 1.4-.2 2.7-.5 3.9L64 96 24 44c-.3-1.2-.5-2.5-.5-3.9C23.5 40.3 29 34 35.5 34 40.8 34 45.3 38 47 44c3.8-7 10.3-12 18-12-7.7 0-14.2 5-18 12z" fill="#fff" fill-opacity="0.85"/>
+  <path d="M40 52l24 18 24-18v30a10 10 0 0 1-10 10H50a10 10 0 0 1-10-10V52z" fill="#fff"/>
+  <path d="M38 48l26 20 26-20" fill="none" stroke="#2d7ff9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+</svg>
