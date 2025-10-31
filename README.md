@@ -18,9 +18,10 @@ Current release: `v0.4.0`
 - Allow-list based access control; traffic is rejected until `SMTP_ALLOW_NETWORKS` or `SMTP_ALLOW_HOSTS` is configured.
 
 ## Project Website
-- Live overview: https://its-donkey.github.io/smtpserver/
+- Live overview: https://gopherpost.io
+- Fallback GitHub Pages URL: https://its-donkey.github.io/smtpserver/
 - Source for the static site lives in `docs/` (GitHub Pages ready).
-- GitHub Pages configuration: Settings → Pages → “Deploy from a branch” → select `main` and `/docs`.
+- GitHub Pages configuration: Settings → Pages → “Deploy from a branch” → select `main` and `/docs`; set custom domain to `gopherpost.io`.
 
 ## Usage
 
