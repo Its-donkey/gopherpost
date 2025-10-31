@@ -107,21 +107,20 @@ $ ./gopherpost</code></pre>
           </div>
         </section>
 
-        <section class="grid capabilities" style="gap: 1.5rem;">
+        <section class="grid features-section" style="gap: 1.5rem;">
           <div class="highlight">
-            <h2>Current capabilities</h2>
+            <h2>Features</h2>
             <p>Everything you need to receive, inspect, and forward mail with confidence.</p>
           </div>
           <div class="card">
-            <ul class="capabilities-list">
-              <li>Implements core SMTP verbs with multi-recipient support, dot-stuffing handling, message-size limits, and per-command deadlines.</li>
-              <li>Applies allow-list checks (host/IP) before advertising the banner, adding reliable ingress control.</li>
-              <li>Persists accepted messages to disk with per-recipient hashing so stored artefacts hide raw addresses.</li>
-              <li>Delivers outbound mail via MX resolution, randomized equal-priority retries, and opportunistic STARTTLS with jittered backoff.</li>
-              <li>Supports DKIM signing when selector, key, and domain are provided.</li>
-              <li>Exposes health endpoints with metrics and optional live audit streaming for quick troubleshooting.</li>
-              <li>Streams audit logs that can be toggled at runtime and consumed by the health endpoint.</li>
-              <li>Configures entirely via environment variables (with .env support) including ports, banners, DKIM, and queue paths.</li>
+            <ul class="feature-list">
+              <li>Implements core SMTP verbs with multi-recipient support, dot-stuffing handling, a 10 MiB message-size limit, and per-command deadlines.</li>
+              <li>Enforces host/IP allow-lists before sending the banner for reliable ingress control.</li>
+              <li>Persists accepted messages with per-recipient hashing so stored artefacts stay private yet reviewable.</li>
+              <li>Delivers outbound mail via MX resolution, randomized equal-priority retries, opportunistic STARTTLS, and jittered exponential backoff.</li>
+              <li>Supports DKIM signing when selector, key, and domain values are configured.</li>
+              <li>Provides observability through the health server, `/metrics`, and optional live audit streaming with runtime-configurable logging.</li>
+              <li>Configures entirely via environment variables (with `.env` support) for ports, banners, TLS/DKIM assets, and queue storage paths.</li>
             </ul>
           </div>
         </section>
