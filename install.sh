@@ -128,6 +128,7 @@ SMTP_HEALTH_PORT="$(ask SMTP_HEALTH_PORT 'SMTP_HEALTH_PORT' '8877')"
 SMTP_HEALTH_DISABLE="$(ask SMTP_HEALTH_DISABLE 'SMTP_HEALTH_DISABLE (true/false)' 'false')"
 
 SMTP_QUEUE_PATH="$(ask SMTP_QUEUE_PATH 'SMTP_QUEUE_PATH' "${DEFAULT_QUEUE_DIR}")"
+SMTP_QUEUE_WORKERS="$(ask SMTP_QUEUE_WORKERS 'SMTP_QUEUE_WORKERS (concurrent workers, blank for auto)' '')"
 SMTP_ALLOW_NETWORKS="$(ask SMTP_ALLOW_NETWORKS 'SMTP_ALLOW_NETWORKS (CIDR list)' '')"
 SMTP_ALLOW_HOSTS="$(ask SMTP_ALLOW_HOSTS 'SMTP_ALLOW_HOSTS (comma-separated)' '127.0.0.1')"
 SMTP_REQUIRE_LOCAL_DOMAIN="$(ask SMTP_REQUIRE_LOCAL_DOMAIN 'SMTP_REQUIRE_LOCAL_DOMAIN (true/false)' 'true')"
@@ -171,6 +172,7 @@ env_lines+=("Environment=\"SMTP_DEBUG=$(esc_env_val "$SMTP_DEBUG")\"")
 env_lines+=("Environment=\"SMTP_HEALTH_PORT=$(esc_env_val "$SMTP_HEALTH_PORT")\"")
 env_lines+=("Environment=\"SMTP_HEALTH_DISABLE=$(esc_env_val "$SMTP_HEALTH_DISABLE")\"")
 env_lines+=("Environment=\"SMTP_QUEUE_PATH=$(esc_env_val "$SMTP_QUEUE_PATH")\"")
+[[ -n "$SMTP_QUEUE_WORKERS" ]] && env_lines+=("Environment=\"SMTP_QUEUE_WORKERS=$(esc_env_val "$SMTP_QUEUE_WORKERS")\"")
 env_lines+=("Environment=\"SMTP_ALLOW_NETWORKS=$(esc_env_val "$SMTP_ALLOW_NETWORKS")\"")
 env_lines+=("Environment=\"SMTP_ALLOW_HOSTS=$(esc_env_val "$SMTP_ALLOW_HOSTS")\"")
 env_lines+=("Environment=\"SMTP_REQUIRE_LOCAL_DOMAIN=$(esc_env_val "$SMTP_REQUIRE_LOCAL_DOMAIN")\"")

@@ -19,22 +19,22 @@ import (
 
 	"github.com/joho/godotenv"
 
-    health "gopherpost/health"
-    audit "gopherpost/internal/audit"
-    "gopherpost/internal/config"
-    "gopherpost/internal/dkim"
-    "gopherpost/internal/email"
-    "gopherpost/internal/metrics"
-    "gopherpost/internal/version"
-    "gopherpost/queue"
-    "gopherpost/storage"
-    tlsconfig "gopherpost/tlsconfig"
+	health "gopherpost/health"
+	audit "gopherpost/internal/audit"
+	"gopherpost/internal/config"
+	"gopherpost/internal/dkim"
+	"gopherpost/internal/email"
+	"gopherpost/internal/metrics"
+	"gopherpost/internal/version"
+	"gopherpost/queue"
+	"gopherpost/storage"
+	tlsconfig "gopherpost/tlsconfig"
 )
 
 const (
 	defaultSMTPPort   = "2525"
 	defaultHealthAddr = ":8080"
-    defaultBanner     = "GopherPost ready"
+	defaultBanner     = "GopherPost ready"
 	maxMessageBytes   = 10 << 20 // 10 MiB
 	commandDeadline   = 15 * time.Minute
 )
@@ -42,7 +42,7 @@ const (
 func main() {
 	_ = godotenv.Load()
 	audit.RefreshFromEnv()
-    log.Printf("GopherPost version %s starting", version.Number)
+	log.Printf("GopherPost version %s starting", version.Number)
 	audit.Log("version %s boot", version.Number)
 
 	port := defaultSMTPPort
@@ -89,11 +89,14 @@ func main() {
 		log.Printf("Health endpoint listening on %s/healthz", healthListener.Addr().String())
 	}
 
-	q := queue.NewManager()
+	workerCount := config.QueueWorkers()
+	q := queue.NewManager(queue.WithWorkers(workerCount))
 	if dir := strings.TrimSpace(os.Getenv("SMTP_QUEUE_PATH")); dir != "" {
 		storage.SetBaseDir(dir)
 		log.Printf("Queue storage path set to %s", dir)
 	}
+	log.Printf("Queue workers configured: %d", workerCount)
+	audit.Log("queue workers %d", workerCount)
 	q.Start()
 	defer q.Stop()
 
@@ -141,7 +144,18 @@ func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname st
 		prefixArgs := append([]any{sessionID}, args...)
 		audit.Log("session %s "+format, prefixArgs...)
 	}
+	send := func(code int, msg string) bool {
+		t := fmt.Sprintf("%d %s", code, msg)
+		if err := tp.PrintfLine(t); err != nil {
+			log.Printf("send error to %s: %v", remote, err)
+			alog("send error: %v", err)
+			return false
+		}
+		alog("sent %d %s", code, msg)
+		return true
+	}
 	if !connAllowed(remoteAddr) {
+		_ = send(554, "5.7.1 Access denied")
 		audit.Log("session %s rejected remote %s", sessionID, remote)
 		return
 	}
@@ -157,17 +171,6 @@ func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname st
 		log.Printf("failed to set initial deadline: %v", err)
 		alog("set deadline failed: %v", err)
 		return
-	}
-
-	send := func(code int, msg string) bool {
-		t := fmt.Sprintf("%d %s", code, msg)
-		if err := tp.PrintfLine(t); err != nil {
-			log.Printf("send error to %s: %v", remote, err)
-			alog("send error: %v", err)
-			return false
-		}
-		alog("sent %d %s", code, msg)
-		return true
 	}
 
 	if !send(220, greeting) {
@@ -319,15 +322,18 @@ func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname st
 			}
 			payload := queue.NewPayload(messageBytes)
 			var queued []queue.QueuedMessage
+			var persistedPaths []string
 			var persistErr error
 
 			for _, rcpt := range to {
-				if err := storage.SaveMessage(messageID, from, rcpt, messageBytes); err != nil {
+				path, err := storage.SaveMessage(messageID, from, rcpt, messageBytes)
+				if err != nil {
 					log.Printf("failed to persist message for %s: %v", rcpt, err)
 					alog("storage error for %s: %v", rcpt, err)
 					persistErr = err
 					break
 				}
+				persistedPaths = append(persistedPaths, path)
 				queued = append(queued, queue.QueuedMessage{
 					ID:      messageID,
 					From:    from,
@@ -336,6 +342,12 @@ func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname st
 				})
 			}
 			if persistErr != nil {
+				for _, path := range persistedPaths {
+					if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+						log.Printf("failed to roll back persisted message %s: %v", path, err)
+						alog("rollback error %s: %v", path, err)
+					}
+				}
 				if !send(451, "Requested action aborted: storage failure") {
 					return
 				}

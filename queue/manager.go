@@ -3,12 +3,13 @@ package queue
 import (
 	"log"
 	"math/rand"
+	"runtime"
 	"sync"
 	"time"
 
-    "gopherpost/delivery"
-    audit "gopherpost/internal/audit"
-    "gopherpost/internal/metrics"
+	"gopherpost/delivery"
+	audit "gopherpost/internal/audit"
+	"gopherpost/internal/metrics"
 )
 
 var deliverFunc = delivery.DeliverMessage
@@ -19,18 +20,40 @@ func init() {
 
 // Manager manages a queue of outgoing messages with retry logic.
 type Manager struct {
-	queue []QueuedMessage
-	mu    sync.Mutex
-	quit  chan struct{}
-	once  sync.Once
+	queue    []QueuedMessage
+	mu       sync.Mutex
+	quit     chan struct{}
+	once     sync.Once
+	stopOnce sync.Once
+	workers  int
+}
+
+// Option configures a Manager.
+type Option func(*Manager)
+
+// WithWorkers overrides the number of concurrent delivery workers.
+func WithWorkers(workers int) Option {
+	return func(m *Manager) {
+		if workers > 0 {
+			m.workers = workers
+		}
+	}
 }
 
 // NewManager creates a new delivery queue manager.
-func NewManager() *Manager {
-	return &Manager{
-		queue: make([]QueuedMessage, 0),
-		quit:  make(chan struct{}),
+func NewManager(opts ...Option) *Manager {
+	m := &Manager{
+		queue:   make([]QueuedMessage, 0),
+		quit:    make(chan struct{}),
+		workers: runtime.NumCPU(),
 	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	if m.workers < 1 {
+		m.workers = 1
+	}
+	return m
 }
 
 // Enqueue adds a message to the queue.
@@ -41,8 +64,8 @@ func (m *Manager) Enqueue(msg QueuedMessage) {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if msg.Attempts == 0 {
-		msg.NextRetry = time.Now().Add(initialBackoff())
+	if msg.Attempts == 0 && msg.NextRetry.IsZero() {
+		msg.NextRetry = time.Now()
 	}
 	m.queue = append(m.queue, msg)
 	log.Printf("Queued message %s for %s (attempt %d)", msg.ID, msg.To, msg.Attempts)
@@ -72,7 +95,9 @@ func (m *Manager) Start() {
 
 // Stop shuts down the queue processor.
 func (m *Manager) Stop() {
-	close(m.quit)
+	m.stopOnce.Do(func() {
+		close(m.quit)
+	})
 }
 
 // processQueue attempts to deliver messages that are due.
@@ -94,35 +119,55 @@ func (m *Manager) processQueue() {
 	metrics.SetQueueDepth(len(m.queue))
 	m.mu.Unlock()
 
-	for _, msg := range due {
-		payload := msg.Payload
-		if payload == nil {
-			log.Printf("Skipping message %s for %s: missing payload", msg.ID, msg.To)
-			audit.Log("queue skip %s -> %s missing payload", msg.ID, msg.To)
-			continue
-		}
-
-		err := deliverFunc(msg.From, msg.To, payload.Bytes())
-		if err != nil {
-			msg.Attempts++
-			msg.NextRetry = time.Now().Add(backoffDuration(msg.Attempts))
-			msg.LastError = err.Error()
-			log.Printf("Retry %d for %s in %v (message %s): %v", msg.Attempts, msg.To, time.Until(msg.NextRetry), msg.ID, err)
-			metrics.DeliveryFailures.Add(1)
-			audit.Log("queue retry %s -> %s attempt %d next %s error %v", msg.ID, msg.To, msg.Attempts, msg.NextRetry.Format(time.RFC3339), err)
-
-			m.mu.Lock()
-			m.queue = append(m.queue, msg)
-			metrics.SetQueueDepth(len(m.queue))
-			m.mu.Unlock()
-			continue
-		}
-
-		msg.LastError = ""
-		log.Printf("Delivered message %s to %s", msg.ID, msg.To)
-		metrics.MessagesDelivered.Add(1)
-		audit.Log("queue delivered %s -> %s attempts %d", msg.ID, msg.To, msg.Attempts)
+	if len(due) == 0 {
+		return
 	}
+
+	workerCount := m.workers
+	if workerCount < 1 {
+		workerCount = 1
+	}
+	sem := make(chan struct{}, workerCount)
+	var wg sync.WaitGroup
+
+	for _, msg := range due {
+		msg := msg
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			payload := msg.Payload
+			if payload == nil {
+				log.Printf("Skipping message %s for %s: missing payload", msg.ID, msg.To)
+				audit.Log("queue skip %s -> %s missing payload", msg.ID, msg.To)
+				return
+			}
+
+			if err := deliverFunc(msg.From, msg.To, payload.Bytes()); err != nil {
+				msg.Attempts++
+				msg.NextRetry = time.Now().Add(backoffDuration(msg.Attempts))
+				msg.LastError = err.Error()
+				log.Printf("Retry %d for %s in %v (message %s): %v", msg.Attempts, msg.To, time.Until(msg.NextRetry), msg.ID, err)
+				metrics.DeliveryFailures.Add(1)
+				audit.Log("queue retry %s -> %s attempt %d next %s error %v", msg.ID, msg.To, msg.Attempts, msg.NextRetry.Format(time.RFC3339), err)
+
+				m.mu.Lock()
+				m.queue = append(m.queue, msg)
+				metrics.SetQueueDepth(len(m.queue))
+				m.mu.Unlock()
+				return
+			}
+
+			msg.LastError = ""
+			log.Printf("Delivered message %s to %s", msg.ID, msg.To)
+			metrics.MessagesDelivered.Add(1)
+			audit.Log("queue delivered %s -> %s attempts %d", msg.ID, msg.To, msg.Attempts)
+		}()
+	}
+
+	wg.Wait()
 }
 
 // Depth returns the current queue length.
@@ -139,10 +184,6 @@ func backoffDuration(attempts int) time.Duration {
 	base := time.Minute * time.Duration(1<<uint(min(attempts-1, 6)))
 	jitter := time.Duration(rand.Int63n(int64(base / 4)))
 	return base + jitter
-}
-
-func initialBackoff() time.Duration {
-	return time.Second
 }
 
 func min(a, b int) int {

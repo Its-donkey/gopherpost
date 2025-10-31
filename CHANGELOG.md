@@ -29,6 +29,10 @@
 - Website: Add dedicated contact section with email and GitHub links.
 - Docs: Consolidate feature list in README (single "Features" section).
 - Website: Mirror unified feature list on the marketing page.
+- SMTP: Send a 554 5.7.1 rejection prior to closing unauthorized sessions so operators see explicit failures when hosts are misconfigured.
+- Storage: Roll back partially persisted messages when any recipient write fails to keep the spool aligned with the delivery queue.
+- Queue: Introduce a configurable worker pool with idempotent shutdown semantics and tests that verify real concurrency instead of timing heuristics.
+- Config: Document and surface the new `SMTP_QUEUE_WORKERS` environment variable across README, `.env.example`, install tooling, and the marketing site.
 <<<<<<< HEAD
 - Brand: Refresh GopherPost logo and favicon with updated gopher-and-envelope concept; refine site header hover styling.
 =======

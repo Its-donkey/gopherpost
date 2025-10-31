@@ -9,6 +9,7 @@ Current release: `v0.4.0`
 - Enforces allow-listed access by host/IP before any banner is sent, adding a coarse ingress control layer for the unauthenticated listener.
 - Persists accepted messages to disk with per-recipient hashing so stored artefacts are private yet available for later inspection or reprocessing.
 - Performs outbound delivery via MX resolution, randomised equal-priority retries, opportunistic STARTTLS, and jittered exponential backoff managed by the in-memory queue.
+- Scales queue throughput with a configurable pool of concurrent delivery workers so busy deployments keep pace with inbound traffic.
 - Optionally signs outbound mail with DKIM when selector, key, and domain values are supplied through environment variables.
 - Provides built-in observability: a health server exposes readiness, `/metrics` instrumentation, and an optional live audit log stream; audit logging can be toggled at runtime and fanned out to subscribers.
 - Loads configuration entirely from environment variables (with `.env` support) covering ports, banner text, TLS/DKIM assets, and queue storage paths, simplifying containerised or systemd deployments.
@@ -45,9 +46,10 @@ SMTP_HOSTNAME # Hostname advertised in SMTP banners and HELO/EHLO (default syste
 SMTP_BANNER # Custom greeting appended to the initial 220 response (default GopherPost ready).  
 SMTP_DEBUG # Enable verbose audit logging when `true` (default `false`).  
 SMTP_HEALTH_ADDR # Listen address for the health server (default :8080).  
-SMTP_HEALTH_PORT # Override only the port component of the health address (e.g. 9090).  
-SMTP_HEALTH_DISABLE # Disable the health endpoint when `true` (default `false`).  
-SMTP_QUEUE_PATH # Directory used to persist inbound messages (default ./data/spool).  
+SMTP_HEALTH_PORT # Override only the port component of the health address (e.g. 9090).
+SMTP_HEALTH_DISABLE # Disable the health endpoint when `true` (default `false`).
+SMTP_QUEUE_PATH # Directory used to persist inbound messages (default ./data/spool).
+SMTP_QUEUE_WORKERS # Number of concurrent delivery workers processing the outbound queue (default logical CPU count).
 ```
 #### Access control
 

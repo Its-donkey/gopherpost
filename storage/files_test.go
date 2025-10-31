@@ -12,7 +12,7 @@ func TestSaveMessage(t *testing.T) {
 	SetBaseDir(tmp)
 	t.Cleanup(func() { SetBaseDir("./data/spool") })
 
-	if err := SaveMessage("abc123", "from@example.com", "recipient@example.com", []byte("body")); err != nil {
+	if _, err := SaveMessage("abc123", "from@example.com", "recipient@example.com", []byte("body")); err != nil {
 		t.Fatalf("SaveMessage returned error: %v", err)
 	}
 
@@ -52,7 +52,7 @@ func TestSaveMessageSanitizesID(t *testing.T) {
 	SetBaseDir(tmp)
 	t.Cleanup(func() { SetBaseDir("./data/spool") })
 
-	if err := SaveMessage("../bad", "from@example.com", "recipient@example.com", []byte("body")); err == nil {
+	if _, err := SaveMessage("../bad", "from@example.com", "recipient@example.com", []byte("body")); err == nil {
 		t.Fatalf("expected error for invalid identifier")
 	}
 }

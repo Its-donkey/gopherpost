@@ -13,21 +13,25 @@ import (
 
 var baseDir = "./data/spool"
 
-// SaveMessage stores the message on disk for inspection or retry persistence.
-func SaveMessage(id string, from string, to string, data []byte) error {
+// SaveMessage stores the message on disk for inspection or retry persistence and
+// returns the full path to the persisted file.
+func SaveMessage(id string, from string, to string, data []byte) (string, error) {
 	safeID, err := sanitizeComponent(id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	recipientToken := hashRecipient(to)
 
 	dir := filepath.Join(baseDir, time.Now().UTC().Format("2006-01-02"))
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
+		return "", err
 	}
 	filename := filepath.Join(dir, fmt.Sprintf("%s_%s.eml", safeID, recipientToken))
 	payload := append([]byte(nil), data...)
-	return os.WriteFile(filename, payload, 0o600)
+	if err := os.WriteFile(filename, payload, 0o600); err != nil {
+		return "", err
+	}
+	return filename, nil
 }
 
 // SetBaseDir allows overriding the storage location (useful for tests or configuration).
