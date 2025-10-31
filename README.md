@@ -22,6 +22,7 @@ Current release: `v0.4.0`
 - Fallback GitHub Pages URL: https://its-donkey.github.io/smtpserver/
 - Source for the static site lives in `docs/` (GitHub Pages ready).
 - GitHub Pages configuration: Settings → Pages → “Deploy from a branch” → select `main` and `/docs`; set custom domain to `gopherpost.io`.
+- Contact: `gday@gopherpost.io`
 
 ## Usage
 
