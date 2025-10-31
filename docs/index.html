@@ -118,6 +118,7 @@ $ ./gopherpost</code></pre>
               <li>Enforces host/IP allow-lists before sending the banner for reliable ingress control.</li>
               <li>Persists accepted messages with per-recipient hashing so stored artefacts stay private yet reviewable.</li>
               <li>Delivers outbound mail via MX resolution, randomized equal-priority retries, opportunistic STARTTLS, and jittered exponential backoff.</li>
+              <li>Scales with configurable concurrent delivery workers so the queue keeps up with bursty inbound traffic.</li>
               <li>Supports DKIM signing when selector, key, and domain values are configured.</li>
               <li>Provides observability through the health server, `/metrics`, and optional live audit streaming with runtime-configurable logging.</li>
               <li>Configures entirely via environment variables (with `.env` support) for ports, banners, TLS/DKIM assets, and queue storage paths.</li>
