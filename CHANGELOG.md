@@ -26,6 +26,7 @@
 - Website: Configure custom domain via `docs/CNAME` and document at gopherpost.io.
 - Website: Publish contact email `gday@gopherpost.io` on site and README.
 - Website: Add favicon asset (`docs/assets/favicon.svg`) and wire it into the page.
+- Website: Add dedicated contact section with email and GitHub links.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
