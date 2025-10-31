@@ -18,6 +18,7 @@
 - Docs: Add CONTRIBUTING.md and README Contributing section with examples.
 - Repo: Update .gitignore to ignore VS Code settings (`.vscode/*`) and workspace files (`*.code-workspace`).
 - Installer: Improve slug derivation for NAME_LOWER to avoid spaces in slug.
+- Packaging: Update systemd unit description to "GopherPost SMTP Server".
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.

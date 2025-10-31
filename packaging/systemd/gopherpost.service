@@ -1,5 +1,5 @@
 [Unit]
-Description=Ship Shape Sharpening GopherPost SMTP Server v0.4.0
+Description=GopherPost SMTP Server v0.4.0
 After=network-online.target
 Wants=network-online.target
 
