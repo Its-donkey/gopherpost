@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"smtpserver/internal/audit"
+    "gopherpost/internal/audit"
 )
 
 // StartHealthServer launches a lightweight HTTP server that exposes /healthz and /metrics.

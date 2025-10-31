@@ -13,7 +13,7 @@ import (
 	"os"
 	"time"
 
-	"smtpserver/internal/config"
+    "gopherpost/internal/config"
 )
 
 // ErrTLSDisabled is returned when TLS configuration is missing.
@@ -81,12 +81,12 @@ func generateEphemeralCertificate() (tls.Certificate, error) {
 		return tls.Certificate{}, fmt.Errorf("serial: %w", err)
 	}
 
-	tmpl := &x509.Certificate{
-		SerialNumber: serial,
-		Subject: pkix.Name{
-			CommonName:   "smtpserver.local",
-			Organization: []string{"smtpserver"},
-		},
+    tmpl := &x509.Certificate{
+        SerialNumber: serial,
+        Subject: pkix.Name{
+            CommonName:   "gopherpost.local",
+            Organization: []string{"gopherpost"},
+        },
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(24 * time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,

@@ -1,4 +1,4 @@
-# Simple Go SMTP Server
+# GopherPost SMTP Server
 
 This standalone SMTP server is implemented entirely with the Go standard library. It provides a minimal feature set suitable for local testing or development environments where an external mail transfer agent is not available.
 
@@ -27,8 +27,8 @@ cp .env.example .env
 go run ./...
 
 # or build a local binary
-go build -o smtpserver ./...
-./smtpserver
+go build -o gopherpost ./...
+./gopherpost
 ```
 
 ### Configuration
@@ -39,7 +39,7 @@ This server is configured entirely through environment variables (automatically 
 ```yml
 SMTP_PORT # TCP port to bind for the SMTP listener (default 2525).  
 SMTP_HOSTNAME # Hostname advertised in SMTP banners and HELO/EHLO (default system hostname).  
-SMTP_BANNER # Custom greeting appended to the initial 220 response (default smtpserver ready).  
+SMTP_BANNER # Custom greeting appended to the initial 220 response (default GopherPost ready).  
 SMTP_DEBUG # Enable verbose audit logging when `true` (default `false`).  
 SMTP_HEALTH_ADDR # Listen address for the health server (default :8080).  
 SMTP_HEALTH_PORT # Override only the port component of the health address (e.g. 9090).  
@@ -80,26 +80,26 @@ Prerequisites: Linux host with systemd, Go 1.21 or newer, and root access.
 
 ```bash
 # 1. Build the binary
-go build -o smtpserver ./...
+go build -o gopherpost ./...
 
 # 2. Create a dedicated user and runtime directories
-sudo useradd --system --home /opt/smtpserver --shell /usr/sbin/nologin smtpserver
-sudo install -d -o smtpserver -g smtpserver -m 0755 /opt/smtpserver /var/lib/smtpserver /var/spool/smtpserver
-sudo install -d -m 0755 /etc/smtpserver
+sudo useradd --system --home /opt/gopherpost --shell /usr/sbin/nologin gopherpost
+sudo install -d -o gopherpost -g gopherpost -m 0755 /opt/gopherpost /var/lib/gopherpost /var/spool/gopherpost
+sudo install -d -m 0755 /etc/gopherpost
 
 # 3. Install the binary and systemd unit
-sudo install -o root -g root -m 0755 smtpserver /usr/local/bin/smtpserver
-sudo install -m 0644 packaging/systemd/smtpserver.service /etc/systemd/system/smtpserver.service
+sudo install -o root -g root -m 0755 gopherpost /usr/local/bin/gopherpost
+sudo install -m 0644 packaging/systemd/gopherpost.service /etc/systemd/system/gopherpost.service
 
 # 4. Configure environment
-sudo cp .env.example /etc/smtpserver/smtpserver.env
-sudo ${EDITOR:-nano} /etc/smtpserver/smtpserver.env
+sudo cp .env.example /etc/gopherpost/gopherpost.env
+sudo ${EDITOR:-nano} /etc/gopherpost/gopherpost.env
 #   - Set SMTP_ALLOW_NETWORKS or SMTP_ALLOW_HOSTS to the networks/hosts you trust
-#   - Ensure SMTP_QUEUE_PATH=/var/spool/smtpserver (or adjust the unit's ReadWritePaths accordingly)
+#   - Ensure SMTP_QUEUE_PATH=/var/spool/gopherpost (or adjust the unit's ReadWritePaths accordingly)
 
 # 5. Activate the service
 sudo systemctl daemon-reload
-sudo systemctl enable --now smtpserver
+sudo systemctl enable --now gopherpost
 ```
 
 ### Automatic systemd installation
@@ -110,7 +110,7 @@ The `install.sh` helper automates the same steps, generates a tailored unit file
 sudo ./install.sh
 ```
 
-You will be prompted for the environment values (defaults are shown inline). The script will build the binary, create required directories, install the service to `/etc/systemd/system/smtpserver.service`, reload systemd, and start the daemon. Provide an absolute `SMTP_QUEUE_PATH` so the generated `ReadWritePaths` remain valid.
+You will be prompted for the environment values (defaults are shown inline). The script will build the binary, create required directories, install the service to `/etc/systemd/system/gopherpost.service`, reload systemd, and start the daemon. Provide an absolute `SMTP_QUEUE_PATH` so the generated `ReadWritePaths` remain valid.
 
 ## Retrieving Stored Messages
 

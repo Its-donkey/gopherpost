@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"smtpserver/internal/email"
+    "gopherpost/internal/email"
 )
 
 func init() {

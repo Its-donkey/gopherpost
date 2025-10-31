@@ -19,22 +19,22 @@ import (
 
 	"github.com/joho/godotenv"
 
-	health "smtpserver/health"
-	audit "smtpserver/internal/audit"
-	"smtpserver/internal/config"
-	"smtpserver/internal/dkim"
-	"smtpserver/internal/email"
-	"smtpserver/internal/metrics"
-	"smtpserver/internal/version"
-	"smtpserver/queue"
-	"smtpserver/storage"
-	tlsconfig "smtpserver/tlsconfig"
+    health "gopherpost/health"
+    audit "gopherpost/internal/audit"
+    "gopherpost/internal/config"
+    "gopherpost/internal/dkim"
+    "gopherpost/internal/email"
+    "gopherpost/internal/metrics"
+    "gopherpost/internal/version"
+    "gopherpost/queue"
+    "gopherpost/storage"
+    tlsconfig "gopherpost/tlsconfig"
 )
 
 const (
 	defaultSMTPPort   = "2525"
 	defaultHealthAddr = ":8080"
-	defaultBanner     = "smtpserver ready"
+    defaultBanner     = "GopherPost ready"
 	maxMessageBytes   = 10 << 20 // 10 MiB
 	commandDeadline   = 15 * time.Minute
 )
@@ -42,7 +42,7 @@ const (
 func main() {
 	_ = godotenv.Load()
 	audit.RefreshFromEnv()
-	log.Printf("smtpserver version %s starting", version.Number)
+    log.Printf("GopherPost version %s starting", version.Number)
 	audit.Log("version %s boot", version.Number)
 
 	port := defaultSMTPPort

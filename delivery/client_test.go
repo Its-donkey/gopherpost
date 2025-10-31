@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"smtpserver/internal/config"
+    "gopherpost/internal/config"
 )
 
 func TestDeliverSuccess(t *testing.T) {
-	t.Setenv("SMTP_HOSTNAME", "smtpserver.test")
+    t.Setenv("SMTP_HOSTNAME", "gopherpost.test")
 	expectedHello := config.Hostname()
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")

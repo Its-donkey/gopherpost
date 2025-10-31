@@ -7,7 +7,7 @@ import (
 	"net/smtp"
 	"time"
 
-	"smtpserver/internal/config"
+    "gopherpost/internal/config"
 )
 
 var smtpPort = "25"
