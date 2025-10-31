@@ -22,6 +22,7 @@
 - Website: Add GitHub Pages ready static site under `docs/` (logo, styles, landing page).
 - Docs: README now links to the hosted site and documents Pages configuration.
 - Website: Adjust logo dimensions on landing page for better visibility.
+- Website: Embed Google Analytics (G-DWM55QD5ZH) in the static site.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
