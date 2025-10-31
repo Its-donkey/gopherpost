@@ -139,6 +139,19 @@ main {
   color: var(--muted);
 }
 
+.capabilities-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  color: var(--muted);
+}
+
+.capabilities-list li {
+  line-height: 1.5;
+}
+
 .highlight {
   background: var(--accent);
   padding: 1.5rem;
