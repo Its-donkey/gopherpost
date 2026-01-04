@@ -63,7 +63,6 @@ func (m *Manager) Enqueue(msg QueuedMessage) {
 		return
 	}
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if msg.Attempts == 0 && msg.NextRetry.IsZero() {
 		msg.NextRetry = time.Now()
 	}
@@ -72,6 +71,11 @@ func (m *Manager) Enqueue(msg QueuedMessage) {
 	audit.Log("queue enqueue %s -> %s attempt %d next %s", msg.ID, msg.To, msg.Attempts, msg.NextRetry.Format(time.RFC3339))
 	metrics.MessagesQueued.Add(1)
 	metrics.SetQueueDepth(len(m.queue))
+	m.mu.Unlock()
+
+	if err := m.SaveQueue(); err != nil {
+		log.Printf("Failed to persist queue: %v", err)
+	}
 }
 
 // Start starts the queue processor in a background goroutine.
@@ -168,6 +172,10 @@ func (m *Manager) processQueue() {
 	}
 
 	wg.Wait()
+
+	if err := m.SaveQueue(); err != nil {
+		log.Printf("Failed to persist queue after processing: %v", err)
+	}
 }
 
 // Depth returns the current queue length.

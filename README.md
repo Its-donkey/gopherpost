@@ -50,7 +50,16 @@ SMTP_HEALTH_PORT # Override only the port component of the health address (e.g. 
 SMTP_HEALTH_DISABLE # Disable the health endpoint when `true` (default `false`).
 SMTP_QUEUE_PATH # Directory used to persist inbound messages (default ./data/spool).
 SMTP_QUEUE_WORKERS # Number of concurrent delivery workers processing the outbound queue (default logical CPU count).
+SMTP_RETENTION_DAYS # Number of days to retain stored messages before automatic cleanup (default 7).
 ```
+#### Authentication
+
+```yml
+SMTP_AUTH_USERS # Comma-separated list of user:password pairs for SMTP AUTH (e.g. alice:secret,bob:pass123).
+SMTP_AUTH_INSECURE # Allow AUTH without TLS when `true` (default `false`, strongly discouraged).
+```
+When `SMTP_AUTH_USERS` is configured, the server advertises AUTH PLAIN and AUTH LOGIN in EHLO responses (only over TLS unless `SMTP_AUTH_INSECURE` is set). Authenticated users bypass the `SMTP_REQUIRE_LOCAL_DOMAIN` restriction, allowing them to send from any address.
+
 #### Access control
 
 ```yml
@@ -73,7 +82,7 @@ SMTP_DKIM_KEY_PATH # Filesystem path to the DKIM private key (e.g. /etc/dkim/mai
 SMTP_DKIM_PRIVATE_KEY # Inline PEM-formatted DKIM private key (e.g. -----BEGIN RSA PRIVATE KEY-----).  
 SMTP_DKIM_DOMAIN # Domain to sign messages as when overriding the sender domain (e.g. example.com).  
 ```
-**Security note:** configure `SMTP_ALLOW_NETWORKS`, `SMTP_ALLOW_HOSTS`, and `SMTP_REQUIRE_LOCAL_DOMAIN` to enforce ingress and sender restrictions. The server lacks authentication, so deploy behind firewalls or proxies and run as a non-root service account.
+**Security note:** configure `SMTP_ALLOW_NETWORKS`, `SMTP_ALLOW_HOSTS`, and `SMTP_REQUIRE_LOCAL_DOMAIN` to enforce ingress and sender restrictions. For authenticated access, configure `SMTP_AUTH_USERS` and ensure TLS is enabled. Deploy behind firewalls or proxies and run as a non-root service account.
 
 Use an absolute path for `SMTP_QUEUE_PATH` when running the daemon under systemd so that the service `ReadWritePaths` setting can be aligned.
 

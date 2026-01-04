@@ -35,6 +35,9 @@
 - Config: Document and surface the new `SMTP_QUEUE_WORKERS` environment variable across README, `.env.example`, install tooling, and the marketing site.
 - Brand: Refresh GopherPost logo and favicon with updated gopher-and-envelope concept; refine site header hover styling.
 - Brand: Refresh GopherPost logo and favicon with updated gopher-and-envelope concept; add site styling for ringed logo hover state.
+- Queue: Persist delivery queue state to disk so pending deliveries survive restarts; restored entries are logged on startup.
+- Storage: Add configurable retention policy via `SMTP_RETENTION_DAYS` (default 7 days) with automatic cleanup of expired spool directories.
+- Auth: Implement SMTP AUTH (PLAIN and LOGIN mechanisms) via `SMTP_AUTH_USERS` configuration; AUTH is only advertised over TLS unless `SMTP_AUTH_INSECURE` is set. Authenticated users bypass domain restrictions.
 
 ## v0.4.0
 - Added subscription-based audit fan-out so `/healthz` can stream live debug logs when `SMTP_DEBUG=true`.
