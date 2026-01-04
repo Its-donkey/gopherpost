@@ -11,3 +11,5 @@ build-html-wrap.sh
 .DS_Store
 .vscode/*
 *.code-workspace
+CLAUDE.md
+.claude/
