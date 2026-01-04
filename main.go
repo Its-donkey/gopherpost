@@ -21,6 +21,7 @@ import (
 
 	health "gopherpost/health"
 	audit "gopherpost/internal/audit"
+	"gopherpost/internal/auth"
 	"gopherpost/internal/config"
 	"gopherpost/internal/dkim"
 	"gopherpost/internal/email"
@@ -42,7 +43,16 @@ const (
 func main() {
 	_ = godotenv.Load()
 	audit.RefreshFromEnv()
+	auth.LoadFromEnv()
 	log.Printf("GopherPost version %s starting", version.Number)
+	if auth.Enabled() {
+		if auth.AllowInsecure() {
+			log.Printf("SMTP AUTH enabled (warning: insecure mode allows AUTH without TLS)")
+		} else {
+			log.Printf("SMTP AUTH enabled (requires TLS)")
+		}
+		audit.Log("auth enabled insecure=%v", auth.AllowInsecure())
+	}
 	audit.Log("version %s boot", version.Number)
 
 	port := defaultSMTPPort
@@ -93,7 +103,18 @@ func main() {
 	q := queue.NewManager(queue.WithWorkers(workerCount))
 	if dir := strings.TrimSpace(os.Getenv("SMTP_QUEUE_PATH")); dir != "" {
 		storage.SetBaseDir(dir)
+		queue.SetPersistDir(dir)
 		log.Printf("Queue storage path set to %s", dir)
+	}
+	storage.LoadRetentionFromEnv()
+	retentionStop := storage.StartRetentionCleanup()
+	defer close(retentionStop)
+	log.Printf("Message retention set to %d days", storage.RetentionDays())
+	if err := q.LoadQueue(); err != nil {
+		log.Printf("Warning: failed to load persisted queue: %v", err)
+	} else if depth := q.Depth(); depth > 0 {
+		log.Printf("Restored %d pending deliveries from disk", depth)
+		audit.Log("queue restored %d entries", depth)
 	}
 	log.Printf("Queue workers configured: %d", workerCount)
 	audit.Log("queue workers %d", workerCount)
@@ -127,11 +148,12 @@ func main() {
 			log.Printf("Accept error: %v", err)
 			continue
 		}
-		go handleSession(conn, q, greeting, hostname, dkimSigner)
+		tlsActive := tlsConf != nil
+		go handleSession(conn, q, greeting, hostname, dkimSigner, tlsActive)
 	}
 }
 
-func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname string, signer *dkim.Signer) {
+func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname string, signer *dkim.Signer, tlsActive bool) {
 	defer conn.Close()
 	tp := textproto.NewConn(conn)
 	defer tp.Close()
@@ -179,6 +201,11 @@ func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname st
 	var from string
 	var to []string
 	var data bytes.Buffer
+	var authenticated bool
+	var authUser string
+
+	// Determine if AUTH should be offered
+	authAvailable := auth.Enabled() && (tlsActive || auth.AllowInsecure())
 
 	reset := func() {
 		from = ""
@@ -202,11 +229,145 @@ func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname st
 		alog("recv %s", summarizeCommand(line))
 		cmd := strings.ToUpper(line)
 		switch {
-		case strings.HasPrefix(cmd, "HELO") || strings.HasPrefix(cmd, "EHLO"):
+		case strings.HasPrefix(cmd, "HELO"):
 			if !send(250, hostname) {
 				return
 			}
-			alog("handshake %s", cmd[:4])
+			alog("handshake HELO")
+		case strings.HasPrefix(cmd, "EHLO"):
+			// Send multi-line EHLO response
+			lines := []string{hostname}
+			if authAvailable {
+				lines = append(lines, "AUTH PLAIN LOGIN")
+			}
+			for i, l := range lines {
+				var prefix string
+				if i == len(lines)-1 {
+					prefix = "250 "
+				} else {
+					prefix = "250-"
+				}
+				if err := tp.PrintfLine("%s%s", prefix, l); err != nil {
+					log.Printf("send error to %s: %v", remote, err)
+					alog("send error: %v", err)
+					return
+				}
+			}
+			alog("handshake EHLO (auth_available=%v)", authAvailable)
+		case strings.HasPrefix(cmd, "AUTH "):
+			if !authAvailable {
+				if !send(503, "5.5.1 AUTH not available") {
+					return
+				}
+				alog("AUTH rejected: not available")
+				continue
+			}
+			if authenticated {
+				if !send(503, "5.5.1 Already authenticated") {
+					return
+				}
+				alog("AUTH rejected: already authenticated")
+				continue
+			}
+			authMethod := strings.TrimPrefix(cmd, "AUTH ")
+			switch {
+			case strings.HasPrefix(authMethod, "PLAIN"):
+				// AUTH PLAIN may have credentials inline or require continuation
+				parts := strings.SplitN(authMethod, " ", 2)
+				var encodedCreds string
+				if len(parts) == 2 && parts[1] != "" {
+					encodedCreds = parts[1]
+				} else {
+					// Request credentials
+					if err := tp.PrintfLine("334 "); err != nil {
+						alog("send error: %v", err)
+						return
+					}
+					creds, err := tp.ReadLine()
+					if err != nil {
+						alog("read error during AUTH PLAIN: %v", err)
+						return
+					}
+					encodedCreds = creds
+				}
+				user, pass, err := auth.DecodePlain(encodedCreds)
+				if err != nil {
+					if !send(501, "5.5.4 Malformed authentication data") {
+						return
+					}
+					alog("AUTH PLAIN decode error: %v", err)
+					continue
+				}
+				if err := auth.Validate(user, pass); err != nil {
+					if !send(535, "5.7.8 Authentication failed") {
+						return
+					}
+					alog("AUTH PLAIN failed for user %s", user)
+					continue
+				}
+				authenticated = true
+				authUser = user
+				if !send(235, "2.7.0 Authentication successful") {
+					return
+				}
+				alog("AUTH PLAIN success user=%s", user)
+			case strings.HasPrefix(authMethod, "LOGIN"):
+				// AUTH LOGIN uses challenge-response
+				// Send Username: challenge
+				if err := tp.PrintfLine("334 %s", auth.EncodeChallenge("Username:")); err != nil {
+					alog("send error: %v", err)
+					return
+				}
+				encodedUser, err := tp.ReadLine()
+				if err != nil {
+					alog("read error during AUTH LOGIN: %v", err)
+					return
+				}
+				user, err := auth.DecodeLogin(encodedUser)
+				if err != nil {
+					if !send(501, "5.5.4 Malformed authentication data") {
+						return
+					}
+					alog("AUTH LOGIN decode error: %v", err)
+					continue
+				}
+				// Send Password: challenge
+				if err := tp.PrintfLine("334 %s", auth.EncodeChallenge("Password:")); err != nil {
+					alog("send error: %v", err)
+					return
+				}
+				encodedPass, err := tp.ReadLine()
+				if err != nil {
+					alog("read error during AUTH LOGIN: %v", err)
+					return
+				}
+				pass, err := auth.DecodeLogin(encodedPass)
+				if err != nil {
+					if !send(501, "5.5.4 Malformed authentication data") {
+						return
+					}
+					alog("AUTH LOGIN decode error: %v", err)
+					continue
+				}
+				if err := auth.Validate(user, pass); err != nil {
+					if !send(535, "5.7.8 Authentication failed") {
+						return
+					}
+					alog("AUTH LOGIN failed for user %s", user)
+					continue
+				}
+				authenticated = true
+				authUser = user
+				if !send(235, "2.7.0 Authentication successful") {
+					return
+				}
+				alog("AUTH LOGIN success user=%s", user)
+			default:
+				if !send(504, "5.5.4 Unrecognized authentication mechanism") {
+					return
+				}
+				alog("AUTH rejected: unknown mechanism")
+			}
 		case strings.HasPrefix(cmd, "MAIL FROM:"):
 			addr, err := email.ParseCommandAddress(line)
 			if err != nil {
@@ -216,7 +377,8 @@ func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname st
 				alog("invalid MAIL FROM: %v", err)
 				continue
 			}
-			if requireLocalDomain {
+			// Skip domain restriction for authenticated users
+			if requireLocalDomain && !authenticated {
 				domain, derr := email.Domain(addr)
 				if derr != nil {
 					if !send(501, "Invalid sender domain") {
@@ -335,10 +497,11 @@ func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname st
 				}
 				persistedPaths = append(persistedPaths, path)
 				queued = append(queued, queue.QueuedMessage{
-					ID:      messageID,
-					From:    from,
-					To:      rcpt,
-					Payload: payload,
+					ID:       messageID,
+					From:     from,
+					To:       rcpt,
+					FilePath: path,
+					Payload:  payload,
 				})
 			}
 			if persistErr != nil {
@@ -361,7 +524,11 @@ func handleSession(conn net.Conn, q *queue.Manager, greeting string, hostname st
 			if !send(250, fmt.Sprintf("Message queued as %s", messageID)) {
 				return
 			}
-			alog("message %s queued (size=%d bytes, recipients=%d)", messageID, len(messageBytes), len(to))
+			if authenticated {
+				alog("message %s queued (size=%d bytes, recipients=%d, auth_user=%s)", messageID, len(messageBytes), len(to), authUser)
+			} else {
+				alog("message %s queued (size=%d bytes, recipients=%d)", messageID, len(messageBytes), len(to))
+			}
 			reset()
 		case strings.HasPrefix(cmd, "QUIT"):
 			if !send(221, "Bye") {

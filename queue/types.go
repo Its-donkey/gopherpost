@@ -26,6 +26,7 @@ type QueuedMessage struct {
 	ID        string
 	From      string
 	To        string
+	FilePath  string
 	Payload   *Payload
 	Attempts  int
 	NextRetry time.Time
